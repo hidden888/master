@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">StreamDeck TV</string>
+
+    <!-- Login -->
+    <string name="login_title">Konto hinzufügen</string>
+    <string name="login_subtitle">Verbinde dich mit deinem Xtream-Codes-Anbieter</string>
+    <string name="login_account_name">Anzeigename</string>
+    <string name="login_server_url">Server-URL (z. B. http://server.tld:8080)</string>
+    <string name="login_username">Benutzername</string>
+    <string name="login_password">Passwort</string>
+    <string name="login_connect">Verbinden</string>
+    <string name="login_connecting">Verbinde…</string>
+    <string name="login_error_fields">Bitte alle Felder ausfüllen.</string>
+
+    <!-- Sidebar -->
+    <string name="nav_live">Live-TV</string>
+    <string name="nav_movies">Filme</string>
+    <string name="nav_series">Serien</string>
+    <string name="nav_favorites">Favoriten</string>
+    <string name="nav_guide">Programm</string>
+    <string name="nav_settings">Einstellungen</string>
+
+    <!-- Common -->
+    <string name="retry">Erneut versuchen</string>
+    <string name="loading">Lädt…</string>
+    <string name="empty_channels">Keine Sender gefunden.</string>
+    <string name="category_all">Alle Sender</string>
+</resources>

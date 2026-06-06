@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="background">#FF0E0F13</color>
+    <color name="surface">#FF181A20</color>
+    <color name="primary">#FF3B82F6</color>
+    <color name="banner_bg">#FF111827</color>
+</resources>
