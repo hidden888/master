@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -26,7 +27,8 @@ import androidx.tv.material3.Text
 
 /**
  * Minimal D-pad-friendly text field built on BasicTextField (tv-material3 ships no TextField).
- * Focusing and pressing CENTER opens the on-screen keyboard.
+ * Focusing and pressing CENTER opens the on-screen keyboard. On touch devices the keyboard's
+ * IME action ([onImeAction]) provides a reliable submit path that does not depend on focus.
  */
 @Composable
 fun TvTextField(
@@ -36,6 +38,8 @@ fun TvTextField(
     modifier: Modifier = Modifier,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
+    imeAction: ImeAction = ImeAction.Next,
+    onImeAction: (() -> Unit)? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
@@ -71,7 +75,12 @@ fun TvTextField(
                 },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = keyboardType,
-                    imeAction = ImeAction.Next,
+                    imeAction = imeAction,
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = { onImeAction?.invoke() },
+                    onGo = { onImeAction?.invoke() },
+                    onSend = { onImeAction?.invoke() },
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )

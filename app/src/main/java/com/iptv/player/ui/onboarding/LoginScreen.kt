@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -86,7 +87,23 @@ fun LoginScreen(
                 label = "Passwort",
                 isPassword = true,
                 keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Done,
+                onImeAction = { viewModel.login(name, url, username, password) },
             )
+
+            Text(
+                text = "Tipp: Auf dem Handy mit der ✓/Fertig-Taste der Tastatur einloggen.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+
+            if (uiState == LoginUiState.Loading) {
+                Text(
+                    text = "Verbinde…",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
 
             val errorMessage = (uiState as? LoginUiState.Error)?.message
             if (errorMessage != null) {
