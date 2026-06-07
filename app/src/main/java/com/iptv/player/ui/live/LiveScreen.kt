@@ -121,7 +121,12 @@ private fun CategoryRail(
                 selected = selectedCategoryId == CATEGORY_ALL,
                 onClick = { onSelect(CATEGORY_ALL) },
             ) {
-                Text("Alle Sender", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    "Alle Sender",
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
         items(categories, key = { it.id }) { category ->
@@ -129,7 +134,12 @@ private fun CategoryRail(
                 selected = selectedCategoryId == category.id,
                 onClick = { onSelect(category.id) },
             ) {
-                Text(category.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    category.name,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
     }
@@ -176,6 +186,7 @@ private fun ChannelList(
                     Text(
                         text = channel.name,
                         style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

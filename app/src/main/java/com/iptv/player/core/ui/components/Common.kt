@@ -43,7 +43,11 @@ fun ErrorView(
                 modifier = Modifier.size(48.dp),
                 tint = MaterialTheme.colorScheme.error,
             )
-            Text(text = message, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
             if (onRetry != null) {
                 PrimaryButton(text = "Erneut versuchen", onClick = onRetry)
             }
