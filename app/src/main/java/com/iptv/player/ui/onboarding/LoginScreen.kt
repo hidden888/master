@@ -23,8 +23,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.iptv.player.core.ui.components.PrimaryButton
 import com.iptv.player.core.ui.components.TvTextField
-import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 
@@ -114,16 +114,12 @@ fun LoginScreen(
                 )
             }
 
-            Button(
+            PrimaryButton(
+                text = if (uiState == LoginUiState.Loading) "Verbinde…" else "Verbinden",
                 onClick = { viewModel.login(name, url, username, password) },
                 enabled = uiState != LoginUiState.Loading,
                 modifier = Modifier.padding(top = 8.dp),
-            ) {
-                Text(
-                    text = if (uiState == LoginUiState.Loading) "Verbinde…" else "Verbinden",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-            }
+            )
         }
     }
 }

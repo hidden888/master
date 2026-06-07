@@ -1,16 +1,29 @@
 package com.iptv.player.ui.live
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -18,7 +31,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
-import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
@@ -61,6 +73,41 @@ fun LiveScreen(
     }
 }
 
+/** A row that reliably reacts to touch taps AND D-pad ENTER, with a focus/selection highlight. */
+@Composable
+private fun SelectableRow(
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+
+    val bg = when {
+        isFocused -> MaterialTheme.colorScheme.primary
+        selected -> MaterialTheme.colorScheme.surfaceVariant
+        else -> Color.Transparent
+    }
+    val borderColor = if (isFocused) Color.White else Color.Transparent
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(bg, RoundedCornerShape(8.dp))
+            .border(2.dp, borderColor, RoundedCornerShape(8.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+    ) {
+        content()
+    }
+}
+
 @Composable
 private fun CategoryRail(
     categories: List<Category>,
@@ -70,20 +117,20 @@ private fun CategoryRail(
 ) {
     TvLazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         item {
-            ListItem(
+            SelectableRow(
                 selected = selectedCategoryId == CATEGORY_ALL,
                 onClick = { onSelect(CATEGORY_ALL) },
-                headlineContent = { Text("Alle Sender") },
-            )
+            ) {
+                Text("Alle Sender", maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
         items(categories, key = { it.id }) { category ->
-            ListItem(
+            SelectableRow(
                 selected = selectedCategoryId == category.id,
                 onClick = { onSelect(category.id) },
-                headlineContent = {
-                    Text(category.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                },
-            )
+            ) {
+                Text(category.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -106,10 +153,17 @@ private fun ChannelList(
     }
     TvLazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         items(channels, key = { it.streamId }) { channel ->
-            ListItem(
+            SelectableRow(
                 selected = false,
                 onClick = { onPlay(channel.streamId) },
-                leadingContent = {
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = channel.num.toString(),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.width(48.dp),
+                    )
                     if (!channel.icon.isNullOrBlank()) {
                         AsyncImage(
                             model = channel.icon,
@@ -117,13 +171,16 @@ private fun ChannelList(
                             contentScale = ContentScale.Fit,
                             modifier = Modifier.size(40.dp),
                         )
+                        Spacer(Modifier.width(12.dp))
                     }
-                },
-                overlineContent = { Text(channel.num.toString()) },
-                headlineContent = {
-                    Text(channel.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                },
-            )
+                    Text(
+                        text = channel.name,
+                        style = MaterialTheme.typography.bodyLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
         }
     }
 }
