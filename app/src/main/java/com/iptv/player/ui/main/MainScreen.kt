@@ -7,9 +7,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.LiveTv
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
@@ -33,7 +33,7 @@ import androidx.tv.material3.rememberDrawerState
 import com.iptv.player.ui.live.LiveScreen
 
 private enum class MainTab(val label: String, val icon: ImageVector) {
-    LIVE("Live-TV", Icons.AutoMirrored.Filled.LiveTv),
+    LIVE("Live-TV", Icons.Default.LiveTv),
     MOVIES("Filme", Icons.Default.Movie),
     SERIES("Serien", Icons.Default.Tv),
     FAVORITES("Favoriten", Icons.Default.Favorite),
