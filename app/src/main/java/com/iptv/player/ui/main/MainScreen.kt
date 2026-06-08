@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.iptv.player.ui.epg.EpgGuideScreen
 import com.iptv.player.ui.live.LiveScreen
 
 private enum class MainTab(val label: String, val icon: ImageVector) {
@@ -82,6 +83,7 @@ fun MainScreen(onPlayChannel: (Int) -> Unit) {
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             when (selectedTab) {
                 MainTab.LIVE -> LiveScreen(onPlayChannel = onPlayChannel)
+                MainTab.GUIDE -> EpgGuideScreen(onPlayChannel = onPlayChannel)
                 else -> Placeholder(selectedTab.label)
             }
         }
