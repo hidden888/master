@@ -43,7 +43,8 @@ object NetworkModule {
                 chain.proceed(request)
             }
             .connectTimeout(20, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(30, TimeUnit.SECONDS)
             .build()
     }
 

@@ -34,6 +34,7 @@ import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.items
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.iptv.player.core.ui.components.PrimaryButton
 import com.iptv.player.domain.model.Channel
 import com.iptv.player.domain.model.EpgProgram
 import java.text.SimpleDateFormat
@@ -52,34 +53,62 @@ fun EpgGuideScreen(
 ) {
     val channels by viewModel.channels.collectAsStateWithLifecycle()
     val programs by viewModel.programs.collectAsStateWithLifecycle()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val scroll = rememberScrollState()
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
-    if (channels.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Kein Programm verfügbar.", color = Color.White)
-        }
-        return
-    }
+    when {
+        state is EpgState.Loading && programs.isEmpty() ->
+            CenteredMessage("Programmführer wird geladen…")
 
-    Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-        TimelineHeader(
-            windowStart = viewModel.windowStart,
-            windowEnd = viewModel.windowEnd,
-            scroll = scroll,
-            timeFormat = timeFormat,
-        )
-        TvLazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            items(channels, key = { it.streamId }) { channel ->
-                ChannelRow(
-                    channel = channel,
-                    programs = channel.epgChannelId?.let { programs[it] }.orEmpty(),
-                    windowStart = viewModel.windowStart,
-                    windowEnd = viewModel.windowEnd,
-                    scroll = scroll,
-                    timeFormat = timeFormat,
-                    onPlay = { onPlayChannel(channel.streamId) },
-                )
+        state is EpgState.Error && programs.isEmpty() ->
+            CenteredMessage(
+                message = "EPG konnte nicht geladen werden.\n${(state as EpgState.Error).message}",
+                onRetry = viewModel::refresh,
+            )
+
+        state is EpgState.Empty ->
+            CenteredMessage(
+                message = "Dein Anbieter liefert keinen Programmführer (XMLTV).\n" +
+                    "Now/Next-Infos in der Senderliste funktionieren trotzdem.",
+                onRetry = viewModel::refresh,
+            )
+
+        channels.isEmpty() ->
+            CenteredMessage("Keine Sender vorhanden.")
+
+        else -> Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+            TimelineHeader(
+                windowStart = viewModel.windowStart,
+                windowEnd = viewModel.windowEnd,
+                scroll = scroll,
+                timeFormat = timeFormat,
+            )
+            TvLazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                items(channels, key = { it.streamId }) { channel ->
+                    ChannelRow(
+                        channel = channel,
+                        programs = channel.epgChannelId?.let { programs[it] }.orEmpty(),
+                        windowStart = viewModel.windowStart,
+                        windowEnd = viewModel.windowEnd,
+                        scroll = scroll,
+                        timeFormat = timeFormat,
+                        onPlay = { onPlayChannel(channel.streamId) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CenteredMessage(message: String, onRetry: (() -> Unit)? = null) {
+    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(message, color = Color.White, style = MaterialTheme.typography.titleMedium)
+            if (onRetry != null) {
+                Spacer(Modifier.height(16.dp))
+                PrimaryButton(text = "Aktualisieren", onClick = onRetry)
             }
         }
     }
