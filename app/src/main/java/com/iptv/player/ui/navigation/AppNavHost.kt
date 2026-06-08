@@ -14,6 +14,7 @@ import com.iptv.player.core.util.StreamType
 import com.iptv.player.ui.main.MainScreen
 import com.iptv.player.ui.onboarding.LoginScreen
 import com.iptv.player.ui.player.PlayerScreen
+import com.iptv.player.ui.series.SeriesDetailScreen
 import com.iptv.player.ui.vod.VodDetailScreen
 
 @Composable
@@ -45,6 +46,9 @@ fun AppNavHost(startupViewModel: StartupViewModel = hiltViewModel()) {
                 onOpenMovie = { movieId ->
                     navController.navigate(Screen.VodDetail.create(movieId))
                 },
+                onOpenSeries = { seriesId ->
+                    navController.navigate(Screen.SeriesDetail.create(seriesId))
+                },
             )
         }
 
@@ -66,6 +70,18 @@ fun AppNavHost(startupViewModel: StartupViewModel = hiltViewModel()) {
             VodDetailScreen(
                 onPlay = { id, ext ->
                     navController.navigate(Screen.Player.create(StreamType.VOD, id, ext))
+                },
+                onBack = { navController.popBackStack() },
+            )
+        }
+
+        composable(
+            route = Screen.SeriesDetail.route,
+            arguments = listOf(navArgument(Screen.SeriesDetail.ARG_ID) { type = NavType.IntType }),
+        ) {
+            SeriesDetailScreen(
+                onPlayEpisode = { episodeId, ext ->
+                    navController.navigate(Screen.Player.create(StreamType.SERIES, episodeId, ext))
                 },
                 onBack = { navController.popBackStack() },
             )

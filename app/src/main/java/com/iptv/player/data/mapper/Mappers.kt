@@ -6,18 +6,24 @@ import com.iptv.player.data.local.entity.AccountEntity
 import com.iptv.player.data.local.entity.CategoryEntity
 import com.iptv.player.data.local.entity.ChannelEntity
 import com.iptv.player.data.local.entity.EpgProgramEntity
+import com.iptv.player.data.local.entity.SeriesEntity
 import com.iptv.player.data.local.entity.VodEntity
 import com.iptv.player.data.remote.dto.CategoryDto
 import com.iptv.player.data.remote.dto.EpgListingDto
 import com.iptv.player.data.remote.dto.LiveStreamDto
+import com.iptv.player.data.remote.dto.SeriesDto
+import com.iptv.player.data.remote.dto.SeriesInfoResponseDto
 import com.iptv.player.data.remote.dto.VodInfoResponseDto
 import com.iptv.player.data.remote.dto.VodStreamDto
 import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
 import com.iptv.player.domain.model.EpgProgram
+import com.iptv.player.domain.model.Episode
 import com.iptv.player.domain.model.Movie
 import com.iptv.player.domain.model.MovieDetail
+import com.iptv.player.domain.model.Series
+import com.iptv.player.domain.model.SeriesDetail
 
 fun CategoryDto.toEntity(accountId: Long, type: StreamType, order: Int) = CategoryEntity(
     accountId = accountId,
@@ -88,6 +94,53 @@ fun VodInfoResponseDto.toDomain(fallbackExtension: String?) = MovieDetail(
     cover = info?.movieImage,
     containerExtension = movieData?.containerExtension ?: fallbackExtension,
 )
+
+fun SeriesDto.toEntity(accountId: Long) = SeriesEntity(
+    accountId = accountId,
+    seriesId = seriesId,
+    name = name,
+    cover = cover,
+    plot = plot,
+    genre = genre,
+    categoryId = categoryId,
+)
+
+fun SeriesEntity.toDomain() = Series(
+    seriesId = seriesId,
+    name = name,
+    cover = cover,
+    plot = plot,
+    genre = genre,
+    categoryId = categoryId,
+)
+
+fun SeriesInfoResponseDto.toDomain(fallbackCover: String?): SeriesDetail {
+    val episodesBySeason = episodes
+        .mapNotNull { (seasonKey, list) ->
+            val season = seasonKey.toIntOrNull() ?: return@mapNotNull null
+            season to list.map { dto ->
+                Episode(
+                    id = dto.id.toIntOrNull() ?: 0,
+                    title = dto.title.ifBlank { "Folge ${dto.episodeNum}" },
+                    season = if (dto.season > 0) dto.season else season,
+                    episodeNum = dto.episodeNum,
+                    cover = dto.info?.movieImage,
+                    containerExtension = dto.containerExtension,
+                )
+            }.sortedBy { it.episodeNum }
+        }
+        .toMap()
+    return SeriesDetail(
+        plot = info?.plot,
+        cast = info?.cast,
+        director = info?.director,
+        genre = info?.genre,
+        rating = info?.rating,
+        cover = info?.cover ?: fallbackCover,
+        seasons = episodesBySeason.keys.sorted(),
+        episodesBySeason = episodesBySeason,
+    )
+}
 
 fun EpgProgramEntity.toDomain(): EpgProgram = EpgProgram(
     title = title,

@@ -58,3 +58,32 @@ data class MovieDetail(
     val cover: String?,
     val containerExtension: String?,
 )
+
+data class Series(
+    val seriesId: Int,
+    val name: String,
+    val cover: String?,
+    val plot: String?,
+    val genre: String?,
+    val categoryId: String?,
+)
+
+data class Episode(
+    val id: Int,
+    val title: String,
+    val season: Int,
+    val episodeNum: Int,
+    val cover: String?,
+    val containerExtension: String?,
+)
+
+data class SeriesDetail(
+    val plot: String?,
+    val cast: String?,
+    val director: String?,
+    val genre: String?,
+    val rating: String?,
+    val cover: String?,
+    val seasons: List<Int>,
+    val episodesBySeason: Map<Int, List<Episode>>,
+)

@@ -9,6 +9,7 @@ import com.iptv.player.data.local.entity.AccountEntity
 import com.iptv.player.data.local.entity.CategoryEntity
 import com.iptv.player.data.local.entity.ChannelEntity
 import com.iptv.player.data.local.entity.EpgProgramEntity
+import com.iptv.player.data.local.entity.SeriesEntity
 import com.iptv.player.data.local.entity.VodEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -78,6 +79,27 @@ interface VodDao {
     suspend fun count(accountId: Long): Int
 
     @Query("DELETE FROM vod WHERE accountId = :accountId")
+    suspend fun clear(accountId: Long)
+}
+
+@Dao
+interface SeriesDao {
+    @Upsert
+    suspend fun upsertAll(series: List<SeriesEntity>)
+
+    @Query("SELECT * FROM series WHERE accountId = :accountId ORDER BY name")
+    fun observeAll(accountId: Long): Flow<List<SeriesEntity>>
+
+    @Query("SELECT * FROM series WHERE accountId = :accountId AND categoryId = :categoryId ORDER BY name")
+    fun observeByCategory(accountId: Long, categoryId: String): Flow<List<SeriesEntity>>
+
+    @Query("SELECT * FROM series WHERE accountId = :accountId AND seriesId = :seriesId")
+    suspend fun getById(accountId: Long, seriesId: Int): SeriesEntity?
+
+    @Query("SELECT COUNT(*) FROM series WHERE accountId = :accountId")
+    suspend fun count(accountId: Long): Int
+
+    @Query("DELETE FROM series WHERE accountId = :accountId")
     suspend fun clear(accountId: Long)
 }
 
