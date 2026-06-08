@@ -14,6 +14,7 @@ import com.iptv.player.core.util.StreamType
 import com.iptv.player.ui.main.MainScreen
 import com.iptv.player.ui.onboarding.LoginScreen
 import com.iptv.player.ui.player.PlayerScreen
+import com.iptv.player.ui.profile.ProfileSelectScreen
 import com.iptv.player.ui.series.SeriesDetailScreen
 import com.iptv.player.ui.vod.VodDetailScreen
 
@@ -31,8 +32,18 @@ fun AppNavHost(startupViewModel: StartupViewModel = hiltViewModel()) {
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoggedIn = {
-                    navController.navigate(Screen.Main.route) {
+                    navController.navigate(Screen.ProfileSelect.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+            )
+        }
+
+        composable(Screen.ProfileSelect.route) {
+            ProfileSelectScreen(
+                onProfileActive = {
+                    navController.navigate(Screen.Main.route) {
+                        popUpTo(Screen.ProfileSelect.route) { inclusive = true }
                     }
                 },
             )
@@ -48,6 +59,16 @@ fun AppNavHost(startupViewModel: StartupViewModel = hiltViewModel()) {
                 },
                 onOpenSeries = { seriesId ->
                     navController.navigate(Screen.SeriesDetail.create(seriesId))
+                },
+                onSwitchProfile = {
+                    navController.navigate(Screen.ProfileSelect.route) {
+                        popUpTo(Screen.Main.route) { inclusive = true }
+                    }
+                },
+                onAddAccount = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Main.route) { inclusive = true }
+                    }
                 },
             )
         }

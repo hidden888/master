@@ -10,6 +10,14 @@ data class Account(
     val password: String,
 )
 
+data class Profile(
+    val id: Long,
+    val name: String,
+    val avatarColor: Long,
+    val isKids: Boolean,
+    val hasPin: Boolean,
+)
+
 data class Category(
     val id: String,
     val name: String,

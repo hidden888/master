@@ -4,12 +4,14 @@ import com.iptv.player.data.repository.AccountRepositoryImpl
 import com.iptv.player.data.repository.EpgRepositoryImpl
 import com.iptv.player.data.repository.FavoriteRepositoryImpl
 import com.iptv.player.data.repository.LiveRepositoryImpl
+import com.iptv.player.data.repository.ProfileRepositoryImpl
 import com.iptv.player.data.repository.SeriesRepositoryImpl
 import com.iptv.player.data.repository.VodRepositoryImpl
 import com.iptv.player.domain.repository.AccountRepository
 import com.iptv.player.domain.repository.EpgRepository
 import com.iptv.player.domain.repository.FavoriteRepository
 import com.iptv.player.domain.repository.LiveRepository
+import com.iptv.player.domain.repository.ProfileRepository
 import com.iptv.player.domain.repository.SeriesRepository
 import com.iptv.player.domain.repository.VodRepository
 import dagger.Binds
@@ -45,4 +47,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindFavoriteRepository(impl: FavoriteRepositoryImpl): FavoriteRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindProfileRepository(impl: ProfileRepositoryImpl): ProfileRepository
 }

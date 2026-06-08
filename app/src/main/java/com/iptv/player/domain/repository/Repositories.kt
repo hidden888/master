@@ -9,6 +9,7 @@ import com.iptv.player.domain.model.EpgProgram
 import com.iptv.player.domain.model.Movie
 import com.iptv.player.domain.model.MovieDetail
 import com.iptv.player.domain.model.NowNext
+import com.iptv.player.domain.model.Profile
 import com.iptv.player.domain.model.Series
 import com.iptv.player.domain.model.SeriesDetail
 import kotlinx.coroutines.flow.Flow
@@ -65,6 +66,25 @@ interface EpgRepository {
 
     /** Programs overlapping [start, end), grouped by epgChannelId, for the guide grid. */
     suspend fun getProgramsInWindow(accountId: Long, start: Long, end: Long): Map<String, List<EpgProgram>>
+}
+
+interface ProfileRepository {
+    fun observeProfiles(): Flow<List<Profile>>
+    suspend fun getProfile(id: Long): Profile?
+    suspend fun hasProfiles(): Boolean
+
+    /** Creates a "Standard" profile when none exist yet and returns the id to activate. */
+    suspend fun ensureDefaultProfile(): Long
+
+    /** Creates a profile. A blank [pin] means no parental lock. Returns the new id. */
+    suspend fun createProfile(name: String, avatarColor: Long, isKids: Boolean, pin: String?): Long
+
+    /** Updates a profile. A blank [pin] removes the parental lock. */
+    suspend fun updateProfile(id: Long, name: String, avatarColor: Long, isKids: Boolean, pin: String?)
+
+    suspend fun deleteProfile(id: Long)
+
+    suspend fun verifyPin(id: Long, pin: String): Boolean
 }
 
 interface FavoriteRepository {

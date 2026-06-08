@@ -8,6 +8,7 @@ import com.iptv.player.data.local.dao.CategoryDao
 import com.iptv.player.data.local.dao.ChannelDao
 import com.iptv.player.data.local.dao.EpgDao
 import com.iptv.player.data.local.dao.FavoriteDao
+import com.iptv.player.data.local.dao.ProfileDao
 import com.iptv.player.data.local.dao.SeriesDao
 import com.iptv.player.data.local.dao.VodDao
 import dagger.Module
@@ -48,4 +49,7 @@ object DatabaseModule {
 
     @Provides
     fun provideFavoriteDao(db: AppDatabase): FavoriteDao = db.favoriteDao()
+
+    @Provides
+    fun provideProfileDao(db: AppDatabase): ProfileDao = db.profileDao()
 }

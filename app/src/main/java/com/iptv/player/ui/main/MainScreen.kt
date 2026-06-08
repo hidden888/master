@@ -43,6 +43,7 @@ import com.iptv.player.ui.epg.EpgGuideScreen
 import com.iptv.player.ui.favorites.FavoritesScreen
 import com.iptv.player.ui.live.LiveScreen
 import com.iptv.player.ui.series.SeriesBrowseScreen
+import com.iptv.player.ui.settings.SettingsScreen
 import com.iptv.player.ui.vod.VodBrowseScreen
 
 private enum class MainTab(val label: String, val icon: ImageVector) {
@@ -59,6 +60,8 @@ fun MainScreen(
     onPlayChannel: (Int) -> Unit,
     onOpenMovie: (Int) -> Unit,
     onOpenSeries: (Int) -> Unit,
+    onSwitchProfile: () -> Unit,
+    onAddAccount: () -> Unit,
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.LIVE) }
 
@@ -98,6 +101,10 @@ fun MainScreen(
                     onOpenSeries = onOpenSeries,
                 )
                 MainTab.GUIDE -> EpgGuideScreen(onPlayChannel = onPlayChannel)
+                MainTab.SETTINGS -> SettingsScreen(
+                    onSwitchProfile = onSwitchProfile,
+                    onAddAccount = onAddAccount,
+                )
                 else -> Placeholder(selectedTab.label)
             }
         }

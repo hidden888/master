@@ -21,7 +21,7 @@ class StartupViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             _startRoute.value = if (accountRepository.hasAccounts()) {
-                Screen.Main.route
+                Screen.ProfileSelect.route
             } else {
                 Screen.Login.route
             }

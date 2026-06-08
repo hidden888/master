@@ -91,6 +91,18 @@ data class EpgProgramEntity(
     val endUtc: Long,
 )
 
+@Entity(tableName = "profiles")
+data class ProfileEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    /** ARGB color used for the avatar tile. */
+    val avatarColor: Long,
+    val isKids: Boolean = false,
+    /** Salted hash ("salt:hash") for the parental PIN, or null when the profile is unlocked. */
+    val pinHash: String? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+)
+
 @Entity(
     tableName = "favorites",
     primaryKeys = ["accountId", "profileId", "type", "itemId"],

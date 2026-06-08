@@ -6,6 +6,7 @@ import com.iptv.player.data.local.entity.AccountEntity
 import com.iptv.player.data.local.entity.CategoryEntity
 import com.iptv.player.data.local.entity.ChannelEntity
 import com.iptv.player.data.local.entity.EpgProgramEntity
+import com.iptv.player.data.local.entity.ProfileEntity
 import com.iptv.player.data.local.entity.SeriesEntity
 import com.iptv.player.data.local.entity.VodEntity
 import com.iptv.player.data.remote.dto.CategoryDto
@@ -22,6 +23,7 @@ import com.iptv.player.domain.model.EpgProgram
 import com.iptv.player.domain.model.Episode
 import com.iptv.player.domain.model.Movie
 import com.iptv.player.domain.model.MovieDetail
+import com.iptv.player.domain.model.Profile
 import com.iptv.player.domain.model.Series
 import com.iptv.player.domain.model.SeriesDetail
 
@@ -55,6 +57,14 @@ fun ChannelEntity.toDomain() = Channel(
     epgChannelId = epgChannelId,
     categoryId = categoryId,
     tvArchive = tvArchive,
+)
+
+fun ProfileEntity.toDomain() = Profile(
+    id = id,
+    name = name,
+    avatarColor = avatarColor,
+    isKids = isKids,
+    hasPin = pinHash != null,
 )
 
 fun AccountEntity.toDomain(decryptedPassword: String) = Account(
