@@ -38,3 +38,23 @@ data class EpgProgram(
     val startUtc: Long,
     val endUtc: Long,
 )
+
+data class Movie(
+    val streamId: Int,
+    val name: String,
+    val cover: String?,
+    val rating: String?,
+    val containerExtension: String?,
+    val categoryId: String?,
+)
+
+data class MovieDetail(
+    val plot: String?,
+    val cast: String?,
+    val director: String?,
+    val genre: String?,
+    val rating: String?,
+    val duration: String?,
+    val cover: String?,
+    val containerExtension: String?,
+)

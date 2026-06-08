@@ -41,6 +41,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptv.player.ui.epg.EpgGuideScreen
 import com.iptv.player.ui.live.LiveScreen
+import com.iptv.player.ui.vod.VodBrowseScreen
 
 private enum class MainTab(val label: String, val icon: ImageVector) {
     LIVE("Live-TV", Icons.Default.LiveTv),
@@ -52,7 +53,10 @@ private enum class MainTab(val label: String, val icon: ImageVector) {
 }
 
 @Composable
-fun MainScreen(onPlayChannel: (Int) -> Unit) {
+fun MainScreen(
+    onPlayChannel: (Int) -> Unit,
+    onOpenMovie: (Int) -> Unit,
+) {
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.LIVE) }
 
     Row(modifier = Modifier.fillMaxSize()) {
@@ -83,6 +87,7 @@ fun MainScreen(onPlayChannel: (Int) -> Unit) {
         Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
             when (selectedTab) {
                 MainTab.LIVE -> LiveScreen(onPlayChannel = onPlayChannel)
+                MainTab.MOVIES -> VodBrowseScreen(onOpenMovie = onOpenMovie)
                 MainTab.GUIDE -> EpgGuideScreen(onPlayChannel = onPlayChannel)
                 else -> Placeholder(selectedTab.label)
             }

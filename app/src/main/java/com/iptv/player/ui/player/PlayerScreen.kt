@@ -68,11 +68,13 @@ fun PlayerScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black)
-            .focusRequester(focusRequester)
+    val baseModifier = Modifier
+        .fillMaxSize()
+        .background(Color.Black)
+        .focusRequester(focusRequester)
+    // Live: custom surf/zap interaction. VOD/series: rely on the player's own seek controls.
+    val rootModifier = if (uiState.isLive) {
+        baseModifier
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown || uiState.showChannelList) return@onPreviewKeyEvent false
                 when (event.key) {
@@ -85,13 +87,17 @@ fun PlayerScreen(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = { viewModel.toggleChannelList() },
-            ),
-    ) {
+            )
+    } else {
+        baseModifier
+    }
+
+    Box(modifier = rootModifier) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { context ->
                 PlayerView(context).apply {
-                    useController = false
+                    useController = !uiState.isLive
                     keepScreenOn = true
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -116,10 +122,10 @@ fun PlayerScreen(
             )
         }
 
-        if (uiState.error == null && !uiState.showChannelList) {
+        if (uiState.error == null && uiState.isLive && !uiState.showChannelList) {
             NowNextBar(
                 channelNumber = uiState.channelNumber,
-                channelName = uiState.channelName,
+                channelName = uiState.title,
                 modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(),
             )
         }

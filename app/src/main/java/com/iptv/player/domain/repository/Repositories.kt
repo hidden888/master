@@ -5,6 +5,8 @@ import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
 import com.iptv.player.domain.model.EpgProgram
+import com.iptv.player.domain.model.Movie
+import com.iptv.player.domain.model.MovieDetail
 import com.iptv.player.domain.model.NowNext
 import kotlinx.coroutines.flow.Flow
 
@@ -31,6 +33,14 @@ interface LiveRepository {
     suspend fun syncLive(accountId: Long): NetworkResult<Unit>
 
     suspend fun getNowNext(accountId: Long, streamId: Int): NowNext
+}
+
+interface VodRepository {
+    fun observeCategories(accountId: Long): Flow<List<Category>>
+    fun observeMovies(accountId: Long, categoryId: String?): Flow<List<Movie>>
+    suspend fun getMovie(accountId: Long, streamId: Int): Movie?
+    suspend fun syncVod(accountId: Long): NetworkResult<Unit>
+    suspend fun getMovieDetail(accountId: Long, streamId: Int): NetworkResult<MovieDetail>
 }
 
 interface EpgRepository {

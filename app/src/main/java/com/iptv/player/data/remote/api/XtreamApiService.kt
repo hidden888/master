@@ -5,6 +5,7 @@ import com.iptv.player.data.remote.dto.CategoryDto
 import com.iptv.player.data.remote.dto.LiveStreamDto
 import com.iptv.player.data.remote.dto.SeriesDto
 import com.iptv.player.data.remote.dto.ShortEpgResponseDto
+import com.iptv.player.data.remote.dto.VodInfoResponseDto
 import com.iptv.player.data.remote.dto.VodStreamDto
 import okhttp3.ResponseBody
 import retrofit2.Response
@@ -76,6 +77,15 @@ interface XtreamApiService {
         @Query("category_id") categoryId: String? = null,
         @Query("action") action: String = "get_series",
     ): Response<List<SeriesDto>>
+
+    @GET
+    suspend fun getVodInfo(
+        @Url url: String,
+        @Query("username") username: String,
+        @Query("password") password: String,
+        @Query("vod_id") vodId: Int,
+        @Query("action") action: String = "get_vod_info",
+    ): Response<VodInfoResponseDto>
 
     @GET
     suspend fun getShortEpg(

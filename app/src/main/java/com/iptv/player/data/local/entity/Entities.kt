@@ -48,6 +48,21 @@ data class ChannelEntity(
 )
 
 @Entity(
+    tableName = "vod",
+    primaryKeys = ["accountId", "streamId"],
+    indices = [Index("accountId", "categoryId")],
+)
+data class VodEntity(
+    val accountId: Long,
+    val streamId: Int,
+    val name: String,
+    val cover: String? = null,
+    val rating: String? = null,
+    val containerExtension: String? = null,
+    val categoryId: String? = null,
+)
+
+@Entity(
     tableName = "epg_programs",
     indices = [Index("accountId", "epgChannelId", "startUtc")],
 )

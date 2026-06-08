@@ -10,9 +10,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.iptv.player.core.ui.components.LoadingIndicator
+import com.iptv.player.core.util.StreamType
 import com.iptv.player.ui.main.MainScreen
 import com.iptv.player.ui.onboarding.LoginScreen
 import com.iptv.player.ui.player.PlayerScreen
+import com.iptv.player.ui.vod.VodDetailScreen
 
 @Composable
 fun AppNavHost(startupViewModel: StartupViewModel = hiltViewModel()) {
@@ -38,16 +40,35 @@ fun AppNavHost(startupViewModel: StartupViewModel = hiltViewModel()) {
         composable(Screen.Main.route) {
             MainScreen(
                 onPlayChannel = { streamId ->
-                    navController.navigate(Screen.Player.create(streamId))
+                    navController.navigate(Screen.Player.create(StreamType.LIVE, streamId))
+                },
+                onOpenMovie = { movieId ->
+                    navController.navigate(Screen.VodDetail.create(movieId))
                 },
             )
         }
 
         composable(
             route = Screen.Player.route,
-            arguments = listOf(navArgument(Screen.Player.ARG_STREAM_ID) { type = NavType.IntType }),
+            arguments = listOf(
+                navArgument(Screen.Player.ARG_TYPE) { type = NavType.StringType },
+                navArgument(Screen.Player.ARG_ID) { type = NavType.IntType },
+                navArgument(Screen.Player.ARG_EXT) { type = NavType.StringType },
+            ),
         ) {
             PlayerScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(
+            route = Screen.VodDetail.route,
+            arguments = listOf(navArgument(Screen.VodDetail.ARG_ID) { type = NavType.IntType }),
+        ) {
+            VodDetailScreen(
+                onPlay = { id, ext ->
+                    navController.navigate(Screen.Player.create(StreamType.VOD, id, ext))
+                },
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

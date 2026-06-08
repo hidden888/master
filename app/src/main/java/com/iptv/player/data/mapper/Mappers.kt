@@ -6,13 +6,18 @@ import com.iptv.player.data.local.entity.AccountEntity
 import com.iptv.player.data.local.entity.CategoryEntity
 import com.iptv.player.data.local.entity.ChannelEntity
 import com.iptv.player.data.local.entity.EpgProgramEntity
+import com.iptv.player.data.local.entity.VodEntity
 import com.iptv.player.data.remote.dto.CategoryDto
 import com.iptv.player.data.remote.dto.EpgListingDto
 import com.iptv.player.data.remote.dto.LiveStreamDto
+import com.iptv.player.data.remote.dto.VodInfoResponseDto
+import com.iptv.player.data.remote.dto.VodStreamDto
 import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
 import com.iptv.player.domain.model.EpgProgram
+import com.iptv.player.domain.model.Movie
+import com.iptv.player.domain.model.MovieDetail
 
 fun CategoryDto.toEntity(accountId: Long, type: StreamType, order: Int) = CategoryEntity(
     accountId = accountId,
@@ -52,6 +57,36 @@ fun AccountEntity.toDomain(decryptedPassword: String) = Account(
     baseUrl = baseUrl,
     username = username,
     password = decryptedPassword,
+)
+
+fun VodStreamDto.toEntity(accountId: Long) = VodEntity(
+    accountId = accountId,
+    streamId = streamId,
+    name = name,
+    cover = cover ?: streamIcon,
+    rating = rating,
+    containerExtension = containerExtension,
+    categoryId = categoryId,
+)
+
+fun VodEntity.toDomain() = Movie(
+    streamId = streamId,
+    name = name,
+    cover = cover,
+    rating = rating,
+    containerExtension = containerExtension,
+    categoryId = categoryId,
+)
+
+fun VodInfoResponseDto.toDomain(fallbackExtension: String?) = MovieDetail(
+    plot = info?.plot,
+    cast = info?.cast,
+    director = info?.director,
+    genre = info?.genre,
+    rating = info?.rating,
+    duration = info?.duration,
+    cover = info?.movieImage,
+    containerExtension = movieData?.containerExtension ?: fallbackExtension,
 )
 
 fun EpgProgramEntity.toDomain(): EpgProgram = EpgProgram(
