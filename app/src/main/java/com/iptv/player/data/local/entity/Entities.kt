@@ -46,3 +46,17 @@ data class ChannelEntity(
     val categoryId: String? = null,
     val tvArchive: Boolean = false,
 )
+
+@Entity(
+    tableName = "epg_programs",
+    indices = [Index("accountId", "epgChannelId", "startUtc")],
+)
+data class EpgProgramEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val accountId: Long,
+    val epgChannelId: String,
+    val title: String,
+    val description: String,
+    val startUtc: Long,
+    val endUtc: Long,
+)

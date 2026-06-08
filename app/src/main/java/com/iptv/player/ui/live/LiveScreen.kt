@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,6 +39,7 @@ import com.iptv.player.core.ui.components.ErrorView
 import com.iptv.player.core.ui.components.LoadingIndicator
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
+import com.iptv.player.domain.model.EpgProgram
 import com.iptv.player.domain.repository.CATEGORY_ALL
 
 @Composable
@@ -49,6 +51,7 @@ fun LiveScreen(
     val channels by viewModel.channels.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategoryId.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val currentPrograms by viewModel.currentPrograms.collectAsStateWithLifecycle()
 
     when {
         syncState is SyncState.Loading && channels.isEmpty() -> LoadingIndicator()
@@ -66,6 +69,7 @@ fun LiveScreen(
             )
             ChannelList(
                 channels = channels,
+                currentByChannel = currentPrograms,
                 onPlay = onPlayChannel,
                 modifier = Modifier.weight(1f).fillMaxHeight().padding(start = 16.dp),
             )
@@ -148,6 +152,7 @@ private fun CategoryRail(
 @Composable
 private fun ChannelList(
     channels: List<Channel>,
+    currentByChannel: Map<String, EpgProgram>,
     onPlay: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -163,6 +168,7 @@ private fun ChannelList(
     }
     TvLazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         items(channels, key = { it.streamId }) { channel ->
+            val current = channel.epgChannelId?.let { currentByChannel[it] }
             SelectableRow(
                 selected = false,
                 onClick = { onPlay(channel.streamId) },
@@ -183,15 +189,54 @@ private fun ChannelList(
                         )
                         Spacer(Modifier.width(12.dp))
                     }
-                    Text(
-                        text = channel.name,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = channel.name,
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (current != null) {
+                            Text(
+                                text = current.title,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = Color(0xFFB8C0CC),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            ProgramProgress(
+                                program = current,
+                                modifier = Modifier
+                                    .padding(top = 4.dp)
+                                    .fillMaxWidth(),
+                            )
+                        }
+                    }
                 }
             }
         }
+    }
+}
+
+/** A thin bar showing how far the current program has progressed. */
+@Composable
+private fun ProgramProgress(program: EpgProgram, modifier: Modifier = Modifier) {
+    val now = System.currentTimeMillis()
+    val span = (program.endUtc - program.startUtc).coerceAtLeast(1)
+    val fraction = ((now - program.startUtc).toFloat() / span).coerceIn(0f, 1f)
+    Box(
+        modifier = modifier
+            .height(3.dp)
+            .clip(RoundedCornerShape(2.dp))
+            .background(Color(0x33FFFFFF)),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction)
+                .height(3.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(MaterialTheme.colorScheme.primary),
+        )
     }
 }

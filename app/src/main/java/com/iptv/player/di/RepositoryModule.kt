@@ -1,8 +1,10 @@
 package com.iptv.player.di
 
 import com.iptv.player.data.repository.AccountRepositoryImpl
+import com.iptv.player.data.repository.EpgRepositoryImpl
 import com.iptv.player.data.repository.LiveRepositoryImpl
 import com.iptv.player.domain.repository.AccountRepository
+import com.iptv.player.domain.repository.EpgRepository
 import com.iptv.player.domain.repository.LiveRepository
 import dagger.Binds
 import dagger.Module
@@ -21,4 +23,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindLiveRepository(impl: LiveRepositoryImpl): LiveRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindEpgRepository(impl: EpgRepositoryImpl): EpgRepository
 }

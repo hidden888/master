@@ -6,9 +6,11 @@ import com.iptv.player.data.remote.dto.LiveStreamDto
 import com.iptv.player.data.remote.dto.SeriesDto
 import com.iptv.player.data.remote.dto.ShortEpgResponseDto
 import com.iptv.player.data.remote.dto.VodStreamDto
+import okhttp3.ResponseBody
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
+import retrofit2.http.Streaming
 import retrofit2.http.Url
 
 /**
@@ -84,4 +86,13 @@ interface XtreamApiService {
         @Query("limit") limit: Int = 10,
         @Query("action") action: String = "get_short_epg",
     ): Response<ShortEpgResponseDto>
+
+    /** Full XMLTV EPG dump (can be several MB); streamed and parsed manually. */
+    @Streaming
+    @GET
+    suspend fun getXmltv(
+        @Url url: String,
+        @Query("username") username: String,
+        @Query("password") password: String,
+    ): Response<ResponseBody>
 }

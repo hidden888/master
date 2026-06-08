@@ -22,6 +22,8 @@ object UrlBuilder {
 
     fun playerApi(base: String): String = "${normalizeBaseUrl(base)}/player_api.php"
 
+    fun xmltv(base: String): String = "${normalizeBaseUrl(base)}/xmltv.php"
+
     fun liveUrl(base: String, user: String, pass: String, streamId: Int, ext: String = "m3u8"): String =
         "${normalizeBaseUrl(base)}/live/$user/$pass/$streamId.$ext"
 

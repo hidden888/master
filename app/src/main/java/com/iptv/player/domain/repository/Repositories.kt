@@ -4,6 +4,7 @@ import com.iptv.player.core.network.NetworkResult
 import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
+import com.iptv.player.domain.model.EpgProgram
 import com.iptv.player.domain.model.NowNext
 import kotlinx.coroutines.flow.Flow
 
@@ -30,6 +31,19 @@ interface LiveRepository {
     suspend fun syncLive(accountId: Long): NetworkResult<Unit>
 
     suspend fun getNowNext(accountId: Long, streamId: Int): NowNext
+}
+
+interface EpgRepository {
+    /** Map of epgChannelId -> currently airing program, refreshed over time. */
+    fun observeCurrentByChannel(accountId: Long): Flow<Map<String, EpgProgram>>
+
+    suspend fun hasEpg(accountId: Long): Boolean
+
+    /** Downloads and caches the full XMLTV guide for the account. */
+    suspend fun refreshEpg(accountId: Long): NetworkResult<Unit>
+
+    /** Programs overlapping [start, end), grouped by epgChannelId, for the guide grid. */
+    suspend fun getProgramsInWindow(accountId: Long, start: Long, end: Long): Map<String, List<EpgProgram>>
 }
 
 const val CATEGORY_ALL = "__all__"

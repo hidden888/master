@@ -6,7 +6,9 @@ import com.iptv.player.core.network.NetworkResult
 import com.iptv.player.core.util.SessionManager
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
+import com.iptv.player.domain.model.EpgProgram
 import com.iptv.player.domain.repository.CATEGORY_ALL
+import com.iptv.player.domain.repository.EpgRepository
 import com.iptv.player.domain.repository.LiveRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -32,6 +34,7 @@ sealed interface SyncState {
 @HiltViewModel
 class LiveViewModel @Inject constructor(
     private val liveRepository: LiveRepository,
+    private val epgRepository: EpgRepository,
     private val sessionManager: SessionManager,
 ) : ViewModel() {
 
@@ -51,6 +54,11 @@ class LiveViewModel @Inject constructor(
             .flatMapLatest { (id, cat) -> liveRepository.observeChannels(id, cat) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Currently airing program per EPG channel id, for the now/next labels. */
+    val currentPrograms: StateFlow<Map<String, EpgProgram>> = accountId.filterNotNull()
+        .flatMapLatest { epgRepository.observeCurrentByChannel(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
     init {
         viewModelScope.launch {
             val id = sessionManager.activeAccountId.filterNotNull().first()
@@ -58,6 +66,10 @@ class LiveViewModel @Inject constructor(
             // Sync if the cache looks empty on first entry.
             if (liveRepository.observeChannels(id, CATEGORY_ALL).first().isEmpty()) {
                 sync()
+            }
+            // Load the EPG once if we don't have it yet (non-fatal on failure).
+            if (!epgRepository.hasEpg(id)) {
+                epgRepository.refreshEpg(id)
             }
         }
     }

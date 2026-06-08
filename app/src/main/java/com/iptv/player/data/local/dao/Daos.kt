@@ -1,12 +1,14 @@
 package com.iptv.player.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
 import com.iptv.player.core.util.StreamType
 import com.iptv.player.data.local.entity.AccountEntity
 import com.iptv.player.data.local.entity.CategoryEntity
 import com.iptv.player.data.local.entity.ChannelEntity
+import com.iptv.player.data.local.entity.EpgProgramEntity
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -55,4 +57,40 @@ interface ChannelDao {
 
     @Query("DELETE FROM channels WHERE accountId = :accountId")
     suspend fun clear(accountId: Long)
+}
+
+@Dao
+interface EpgDao {
+    @Insert
+    suspend fun insertAll(programs: List<EpgProgramEntity>)
+
+    @Query("DELETE FROM epg_programs WHERE accountId = :accountId")
+    suspend fun clear(accountId: Long)
+
+    @Query("DELETE FROM epg_programs WHERE endUtc < :cutoff")
+    suspend fun deleteOlderThan(cutoff: Long)
+
+    @Query("SELECT COUNT(*) FROM epg_programs WHERE accountId = :accountId")
+    suspend fun count(accountId: Long): Int
+
+    /** All programs currently on air for the account (one per channel). */
+    @Query(
+        "SELECT * FROM epg_programs WHERE accountId = :accountId " +
+            "AND startUtc <= :now AND endUtc > :now",
+    )
+    fun observeCurrent(accountId: Long, now: Long): Flow<List<EpgProgramEntity>>
+
+    /** Now + next for a single channel. */
+    @Query(
+        "SELECT * FROM epg_programs WHERE accountId = :accountId " +
+            "AND epgChannelId = :channelId AND endUtc > :now ORDER BY startUtc LIMIT 2",
+    )
+    suspend fun getNowNext(accountId: Long, channelId: String, now: Long): List<EpgProgramEntity>
+
+    /** Programs overlapping a time window, for the guide grid. */
+    @Query(
+        "SELECT * FROM epg_programs WHERE accountId = :accountId " +
+            "AND endUtc > :start AND startUtc < :end ORDER BY epgChannelId, startUtc",
+    )
+    suspend fun getProgramsInWindow(accountId: Long, start: Long, end: Long): List<EpgProgramEntity>
 }

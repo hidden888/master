@@ -5,6 +5,7 @@ import com.iptv.player.core.util.StreamType
 import com.iptv.player.data.local.entity.AccountEntity
 import com.iptv.player.data.local.entity.CategoryEntity
 import com.iptv.player.data.local.entity.ChannelEntity
+import com.iptv.player.data.local.entity.EpgProgramEntity
 import com.iptv.player.data.remote.dto.CategoryDto
 import com.iptv.player.data.remote.dto.EpgListingDto
 import com.iptv.player.data.remote.dto.LiveStreamDto
@@ -51,6 +52,13 @@ fun AccountEntity.toDomain(decryptedPassword: String) = Account(
     baseUrl = baseUrl,
     username = username,
     password = decryptedPassword,
+)
+
+fun EpgProgramEntity.toDomain(): EpgProgram = EpgProgram(
+    title = title,
+    description = description,
+    startUtc = startUtc,
+    endUtc = endUtc,
 )
 
 fun EpgListingDto.toDomain(): EpgProgram = EpgProgram(

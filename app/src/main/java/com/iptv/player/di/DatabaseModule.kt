@@ -6,6 +6,7 @@ import com.iptv.player.data.local.AppDatabase
 import com.iptv.player.data.local.dao.AccountDao
 import com.iptv.player.data.local.dao.CategoryDao
 import com.iptv.player.data.local.dao.ChannelDao
+import com.iptv.player.data.local.dao.EpgDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -32,4 +33,7 @@ object DatabaseModule {
 
     @Provides
     fun provideChannelDao(db: AppDatabase): ChannelDao = db.channelDao()
+
+    @Provides
+    fun provideEpgDao(db: AppDatabase): EpgDao = db.epgDao()
 }
