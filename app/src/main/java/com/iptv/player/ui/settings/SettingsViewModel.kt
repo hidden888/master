@@ -2,14 +2,21 @@ package com.iptv.player.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.iptv.player.core.network.NetworkResult
 import com.iptv.player.core.util.SessionManager
 import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.repository.AccountRepository
+import com.iptv.player.domain.repository.EpgRepository
+import com.iptv.player.domain.repository.LiveRepository
+import com.iptv.player.domain.repository.SeriesRepository
+import com.iptv.player.domain.repository.VodRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -17,6 +24,10 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val accountRepository: AccountRepository,
+    private val liveRepository: LiveRepository,
+    private val vodRepository: VodRepository,
+    private val seriesRepository: SeriesRepository,
+    private val epgRepository: EpgRepository,
     private val sessionManager: SessionManager,
 ) : ViewModel() {
 
@@ -30,10 +41,47 @@ class SettingsViewModel @Inject constructor(
     private val _accountSwitched = MutableStateFlow(false)
     val accountSwitched: StateFlow<Boolean> = _accountSwitched.asStateFlow()
 
+    /** Transient status line for the maintenance actions. */
+    private val _status = MutableStateFlow<String?>(null)
+    val status: StateFlow<String?> = _status.asStateFlow()
+
+    private val _busy = MutableStateFlow(false)
+    val busy: StateFlow<Boolean> = _busy.asStateFlow()
+
     fun switchAccount(id: Long) {
         viewModelScope.launch {
             sessionManager.setActiveAccount(id)
             _accountSwitched.value = true
+        }
+    }
+
+    fun refreshEpg() = run("Programmführer wird aktualisiert…") { id ->
+        when (val r = epgRepository.refreshEpg(id)) {
+            is NetworkResult.Success -> "Programmführer aktualisiert."
+            is NetworkResult.Error -> "EPG: ${r.message}"
+            is NetworkResult.Exception -> "EPG-Fehler: ${r.throwable.message ?: "unbekannt"}"
+        }
+    }
+
+    fun reloadCatalogs() = run("Inhalte werden neu geladen…") { id ->
+        liveRepository.syncLive(id)
+        vodRepository.syncVod(id)
+        seriesRepository.syncSeries(id)
+        "Sender, Filme und Serien neu geladen."
+    }
+
+    private fun run(pending: String, block: suspend (Long) -> String) {
+        if (_busy.value) return
+        viewModelScope.launch {
+            _busy.value = true
+            _status.value = pending
+            _status.value = try {
+                val id = sessionManager.activeAccountId.filterNotNull().first()
+                block(id)
+            } catch (t: Throwable) {
+                "Fehler: ${t.message ?: "unbekannt"}"
+            }
+            _busy.value = false
         }
     }
 }
