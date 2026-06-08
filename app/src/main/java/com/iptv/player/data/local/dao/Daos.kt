@@ -2,6 +2,7 @@ package com.iptv.player.data.local.dao
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import com.iptv.player.core.util.StreamType
@@ -9,6 +10,7 @@ import com.iptv.player.data.local.entity.AccountEntity
 import com.iptv.player.data.local.entity.CategoryEntity
 import com.iptv.player.data.local.entity.ChannelEntity
 import com.iptv.player.data.local.entity.EpgProgramEntity
+import com.iptv.player.data.local.entity.FavoriteEntity
 import com.iptv.player.data.local.entity.SeriesEntity
 import com.iptv.player.data.local.entity.VodEntity
 import kotlinx.coroutines.flow.Flow
@@ -137,4 +139,44 @@ interface EpgDao {
             "AND endUtc > :start AND startUtc < :end ORDER BY epgChannelId, startUtc",
     )
     suspend fun getProgramsInWindow(accountId: Long, start: Long, end: Long): List<EpgProgramEntity>
+}
+
+@Dao
+interface FavoriteDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(favorite: FavoriteEntity)
+
+    @Query(
+        "DELETE FROM favorites WHERE accountId = :accountId AND profileId = :profileId " +
+            "AND type = :type AND itemId = :itemId",
+    )
+    suspend fun delete(accountId: Long, profileId: Long, type: StreamType, itemId: Int)
+
+    /** Favorited item ids for one content type, to drive the star toggles. */
+    @Query(
+        "SELECT itemId FROM favorites WHERE accountId = :accountId " +
+            "AND profileId = :profileId AND type = :type",
+    )
+    fun observeIds(accountId: Long, profileId: Long, type: StreamType): Flow<List<Int>>
+
+    @Query(
+        "SELECT c.* FROM channels c INNER JOIN favorites f " +
+            "ON f.accountId = c.accountId AND f.itemId = c.streamId AND f.type = 'LIVE' " +
+            "WHERE f.accountId = :accountId AND f.profileId = :profileId ORDER BY c.num",
+    )
+    fun observeFavoriteChannels(accountId: Long, profileId: Long): Flow<List<ChannelEntity>>
+
+    @Query(
+        "SELECT v.* FROM vod v INNER JOIN favorites f " +
+            "ON f.accountId = v.accountId AND f.itemId = v.streamId AND f.type = 'VOD' " +
+            "WHERE f.accountId = :accountId AND f.profileId = :profileId ORDER BY v.name",
+    )
+    fun observeFavoriteMovies(accountId: Long, profileId: Long): Flow<List<VodEntity>>
+
+    @Query(
+        "SELECT s.* FROM series s INNER JOIN favorites f " +
+            "ON f.accountId = s.accountId AND f.itemId = s.seriesId AND f.type = 'SERIES' " +
+            "WHERE f.accountId = :accountId AND f.profileId = :profileId ORDER BY s.name",
+    )
+    fun observeFavoriteSeries(accountId: Long, profileId: Long): Flow<List<SeriesEntity>>
 }

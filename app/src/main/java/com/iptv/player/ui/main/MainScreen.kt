@@ -40,6 +40,7 @@ import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptv.player.ui.epg.EpgGuideScreen
+import com.iptv.player.ui.favorites.FavoritesScreen
 import com.iptv.player.ui.live.LiveScreen
 import com.iptv.player.ui.series.SeriesBrowseScreen
 import com.iptv.player.ui.vod.VodBrowseScreen
@@ -91,6 +92,11 @@ fun MainScreen(
                 MainTab.LIVE -> LiveScreen(onPlayChannel = onPlayChannel)
                 MainTab.MOVIES -> VodBrowseScreen(onOpenMovie = onOpenMovie)
                 MainTab.SERIES -> SeriesBrowseScreen(onOpenSeries = onOpenSeries)
+                MainTab.FAVORITES -> FavoritesScreen(
+                    onPlayChannel = onPlayChannel,
+                    onOpenMovie = onOpenMovie,
+                    onOpenSeries = onOpenSeries,
+                )
                 MainTab.GUIDE -> EpgGuideScreen(onPlayChannel = onPlayChannel)
                 else -> Placeholder(selectedTab.label)
             }

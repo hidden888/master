@@ -90,3 +90,17 @@ data class EpgProgramEntity(
     val startUtc: Long,
     val endUtc: Long,
 )
+
+@Entity(
+    tableName = "favorites",
+    primaryKeys = ["accountId", "profileId", "type", "itemId"],
+    indices = [Index("accountId", "profileId", "type")],
+)
+data class FavoriteEntity(
+    val accountId: Long,
+    val profileId: Long,
+    val type: StreamType,
+    /** streamId for LIVE/VOD, seriesId for SERIES. */
+    val itemId: Int,
+    val addedAt: Long = System.currentTimeMillis(),
+)

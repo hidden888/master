@@ -1,6 +1,7 @@
 package com.iptv.player.domain.repository
 
 import com.iptv.player.core.network.NetworkResult
+import com.iptv.player.core.util.StreamType
 import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
@@ -64,6 +65,23 @@ interface EpgRepository {
 
     /** Programs overlapping [start, end), grouped by epgChannelId, for the guide grid. */
     suspend fun getProgramsInWindow(accountId: Long, start: Long, end: Long): Map<String, List<EpgProgram>>
+}
+
+interface FavoriteRepository {
+    /** Set of favorited item ids for one content type, to drive star toggles. */
+    fun observeFavoriteIds(accountId: Long, profileId: Long, type: StreamType): Flow<Set<Int>>
+
+    fun observeFavoriteChannels(accountId: Long, profileId: Long): Flow<List<Channel>>
+    fun observeFavoriteMovies(accountId: Long, profileId: Long): Flow<List<Movie>>
+    fun observeFavoriteSeries(accountId: Long, profileId: Long): Flow<List<Series>>
+
+    suspend fun setFavorite(
+        accountId: Long,
+        profileId: Long,
+        type: StreamType,
+        itemId: Int,
+        favorite: Boolean,
+    )
 }
 
 const val CATEGORY_ALL = "__all__"

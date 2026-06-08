@@ -4,11 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptv.player.core.network.NetworkResult
 import com.iptv.player.core.util.SessionManager
+import com.iptv.player.core.util.StreamType
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
 import com.iptv.player.domain.model.EpgProgram
 import com.iptv.player.domain.repository.CATEGORY_ALL
 import com.iptv.player.domain.repository.EpgRepository
+import com.iptv.player.domain.repository.FavoriteRepository
 import com.iptv.player.domain.repository.LiveRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,10 +37,12 @@ sealed interface SyncState {
 class LiveViewModel @Inject constructor(
     private val liveRepository: LiveRepository,
     private val epgRepository: EpgRepository,
+    private val favoriteRepository: FavoriteRepository,
     private val sessionManager: SessionManager,
 ) : ViewModel() {
 
     private val accountId = MutableStateFlow<Long?>(null)
+    private var profileId: Long = SessionManager.DEFAULT_PROFILE_ID
     private val _selectedCategoryId = MutableStateFlow(CATEGORY_ALL)
     val selectedCategoryId: StateFlow<String> = _selectedCategoryId.asStateFlow()
 
@@ -59,8 +63,14 @@ class LiveViewModel @Inject constructor(
         .flatMapLatest { epgRepository.observeCurrentByChannel(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
+    /** streamIds the user has favorited, to render the star toggles. */
+    val favoriteIds: StateFlow<Set<Int>> = accountId.filterNotNull()
+        .flatMapLatest { favoriteRepository.observeFavoriteIds(it, profileId, StreamType.LIVE) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     init {
         viewModelScope.launch {
+            profileId = sessionManager.activeProfileIdOrDefault.first()
             val id = sessionManager.activeAccountId.filterNotNull().first()
             accountId.value = id
             // Sync if the cache looks empty on first entry.
@@ -76,6 +86,14 @@ class LiveViewModel @Inject constructor(
 
     fun selectCategory(categoryId: String) {
         _selectedCategoryId.value = categoryId
+    }
+
+    fun toggleFavorite(streamId: Int) {
+        val id = accountId.value ?: return
+        val isFav = streamId in favoriteIds.value
+        viewModelScope.launch {
+            favoriteRepository.setFavorite(id, profileId, StreamType.LIVE, streamId, favorite = !isFav)
+        }
     }
 
     fun sync() {

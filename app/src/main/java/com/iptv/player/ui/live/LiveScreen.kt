@@ -52,6 +52,7 @@ fun LiveScreen(
     val selectedCategory by viewModel.selectedCategoryId.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
     val currentPrograms by viewModel.currentPrograms.collectAsStateWithLifecycle()
+    val favoriteIds by viewModel.favoriteIds.collectAsStateWithLifecycle()
 
     when {
         syncState is SyncState.Loading && channels.isEmpty() -> LoadingIndicator()
@@ -70,7 +71,9 @@ fun LiveScreen(
             ChannelList(
                 channels = channels,
                 currentByChannel = currentPrograms,
+                favoriteIds = favoriteIds,
                 onPlay = onPlayChannel,
+                onToggleFavorite = viewModel::toggleFavorite,
                 modifier = Modifier.weight(1f).fillMaxHeight().padding(start = 16.dp),
             )
         }
@@ -153,7 +156,9 @@ private fun CategoryRail(
 private fun ChannelList(
     channels: List<Channel>,
     currentByChannel: Map<String, EpgProgram>,
+    favoriteIds: Set<Int>,
     onPlay: (Int) -> Unit,
+    onToggleFavorite: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (channels.isEmpty()) {
@@ -169,6 +174,7 @@ private fun ChannelList(
     TvLazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         items(channels, key = { it.streamId }) { channel ->
             val current = channel.epgChannelId?.let { currentByChannel[it] }
+            val isFavorite = channel.streamId in favoriteIds
             SelectableRow(
                 selected = false,
                 onClick = { onPlay(channel.streamId) },
@@ -213,9 +219,35 @@ private fun ChannelList(
                             )
                         }
                     }
+                    FavoriteStar(
+                        isFavorite = isFavorite,
+                        onToggle = { onToggleFavorite(channel.streamId) },
+                    )
                 }
             }
         }
+    }
+}
+
+/** A focusable star at the trailing edge of a channel row that toggles the favorite state. */
+@Composable
+private fun FavoriteStar(isFavorite: Boolean, onToggle: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    Box(
+        modifier = Modifier
+            .padding(start = 8.dp)
+            .size(40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (isFocused) Color(0x33FFFFFF) else Color.Transparent)
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = if (isFavorite) "★" else "☆",
+            style = MaterialTheme.typography.titleLarge,
+            color = if (isFavorite) MaterialTheme.colorScheme.primary else Color(0xFFB8C0CC),
+        )
     }
 }
 

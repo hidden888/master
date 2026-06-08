@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptv.player.core.network.NetworkResult
 import com.iptv.player.core.util.SessionManager
+import com.iptv.player.core.util.StreamType
 import com.iptv.player.domain.model.SeriesDetail
+import com.iptv.player.domain.repository.FavoriteRepository
 import com.iptv.player.domain.repository.SeriesRepository
 import com.iptv.player.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,26 +25,38 @@ data class SeriesDetailUiState(
     val cover: String? = null,
     val detail: SeriesDetail? = null,
     val selectedSeason: Int? = null,
+    val isFavorite: Boolean = false,
     val error: String? = null,
 )
 
 @HiltViewModel
 class SeriesDetailViewModel @Inject constructor(
     private val seriesRepository: SeriesRepository,
+    private val favoriteRepository: FavoriteRepository,
     private val sessionManager: SessionManager,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
     private val seriesId: Int = savedStateHandle[Screen.SeriesDetail.ARG_ID] ?: 0
 
+    private var accountId: Long = 0
+    private var profileId: Long = SessionManager.DEFAULT_PROFILE_ID
+
     private val _uiState = MutableStateFlow(SeriesDetailUiState())
     val uiState: StateFlow<SeriesDetailUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
-            val accountId = sessionManager.activeAccountId.filterNotNull().first()
+            accountId = sessionManager.activeAccountId.filterNotNull().first()
+            profileId = sessionManager.activeProfileIdOrDefault.first()
             val series = seriesRepository.getSeries(accountId, seriesId)
             _uiState.value = _uiState.value.copy(name = series?.name ?: "", cover = series?.cover)
+
+            launch {
+                favoriteRepository.observeFavoriteIds(accountId, profileId, StreamType.SERIES).collect { ids ->
+                    _uiState.value = _uiState.value.copy(isFavorite = seriesId in ids)
+                }
+            }
 
             when (val result = seriesRepository.getSeriesDetail(accountId, seriesId)) {
                 is NetworkResult.Success -> _uiState.value = _uiState.value.copy(
@@ -60,5 +74,14 @@ class SeriesDetailViewModel @Inject constructor(
 
     fun selectSeason(season: Int) {
         _uiState.value = _uiState.value.copy(selectedSeason = season)
+    }
+
+    fun toggleFavorite() {
+        viewModelScope.launch {
+            favoriteRepository.setFavorite(
+                accountId, profileId, StreamType.SERIES, seriesId,
+                favorite = !_uiState.value.isFavorite,
+            )
+        }
     }
 }

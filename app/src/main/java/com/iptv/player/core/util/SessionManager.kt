@@ -27,6 +27,10 @@ class SessionManager @Inject constructor(
     val activeProfileId: Flow<Long?> = context.sessionDataStore.data
         .map { it[activeProfileKey] }
 
+    /** Active profile id, falling back to the default profile (0) when none is selected yet. */
+    val activeProfileIdOrDefault: Flow<Long> = context.sessionDataStore.data
+        .map { it[activeProfileKey] ?: DEFAULT_PROFILE_ID }
+
     val lastChannelId: Flow<Long?> = context.sessionDataStore.data
         .map { it[lastChannelKey] }
 
@@ -40,5 +44,9 @@ class SessionManager @Inject constructor(
 
     suspend fun setLastChannel(id: Long) {
         context.sessionDataStore.edit { it[lastChannelKey] = id }
+    }
+
+    companion object {
+        const val DEFAULT_PROFILE_ID = 0L
     }
 }

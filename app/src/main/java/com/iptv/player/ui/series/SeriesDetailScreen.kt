@@ -31,6 +31,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptv.player.core.ui.components.ErrorView
 import com.iptv.player.core.ui.components.LoadingIndicator
+import com.iptv.player.core.ui.components.PrimaryButton
 import com.iptv.player.domain.model.Episode
 
 @Composable
@@ -70,6 +71,12 @@ fun SeriesDetailScreen(
                         modifier = Modifier.padding(top = 8.dp),
                     )
                 }
+
+                PrimaryButton(
+                    text = if (uiState.isFavorite) "★  Favorit" else "☆  Favorit",
+                    onClick = viewModel::toggleFavorite,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
 
                 if ((detail?.seasons?.size ?: 0) > 1) {
                     TvLazyRow(

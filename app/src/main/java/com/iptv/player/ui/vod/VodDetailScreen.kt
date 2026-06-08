@@ -88,11 +88,17 @@ fun VodDetailScreen(
                     )
                     MetaLine(uiState.detail?.genre, uiState.detail?.duration, uiState.detail?.rating)
 
-                    PrimaryButton(
-                        text = "▶  Abspielen",
-                        onClick = { onPlay(viewModel.movieId, viewModel.playbackExtension) },
-                        modifier = Modifier.focusRequester(playFocus),
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        PrimaryButton(
+                            text = "▶  Abspielen",
+                            onClick = { onPlay(viewModel.movieId, viewModel.playbackExtension) },
+                            modifier = Modifier.focusRequester(playFocus),
+                        )
+                        PrimaryButton(
+                            text = if (uiState.isFavorite) "★  Favorit" else "☆  Favorit",
+                            onClick = viewModel::toggleFavorite,
+                        )
+                    }
 
                     uiState.detail?.plot?.takeIf { it.isNotBlank() }?.let { plot ->
                         Text(
