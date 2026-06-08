@@ -22,7 +22,22 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        // A checked-in debug keystore so every CI build is signed with the SAME key.
+        // Without this, GitHub runners generate a fresh debug key per run and Android
+        // rejects updates with "conflicts with an existing package" (signature mismatch).
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
