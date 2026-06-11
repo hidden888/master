@@ -61,6 +61,16 @@ enum class DecoderMode(val label: String) {
     SOFTWARE("Software bevorzugen"),
 }
 
+/** UI accent color. */
+enum class AccentColor(val label: String, val argb: Long) {
+    BLUE("Blau", 0xFF3B82F6),
+    GREEN("Grün", 0xFF22C55E),
+    PURPLE("Violett", 0xFFA855F7),
+    RED("Rot", 0xFFEF4444),
+    ORANGE("Orange", 0xFFF59E0B),
+    TEAL("Türkis", 0xFF14B8A6),
+}
+
 data class AppSettings(
     /** Custom XMLTV EPG URL; blank means use {base}/xmltv.php. */
     val epgUrl: String = "",
@@ -75,6 +85,10 @@ data class AppSettings(
     val showHiddenChannels: Boolean = false,
     /** EPG time shift in hours (-12..12) applied when reading the guide. */
     val epgOffsetHours: Int = 0,
+    val accentColor: AccentColor = AccentColor.BLUE,
+    val showClock: Boolean = true,
+    /** Auto-open the last watched channel when the app starts. */
+    val openLastChannelOnStart: Boolean = false,
 )
 
 private val Context.settingsDataStore by preferencesDataStore(name = "app_settings")
@@ -118,6 +132,10 @@ class SettingsStore @Inject constructor(
         context.settingsDataStore.edit { it[Keys.EPG_OFFSET] = value.coerceIn(-12, 12) }
     }
 
+    suspend fun setAccentColor(value: AccentColor) = put(Keys.ACCENT, value.name)
+    suspend fun setShowClock(value: Boolean) = putBool(Keys.SHOW_CLOCK, value)
+    suspend fun setOpenLastChannelOnStart(value: Boolean) = putBool(Keys.OPEN_LAST, value)
+
     /** Hidden channel stream ids for a given account. */
     fun hiddenChannels(accountId: Long): Flow<Set<Int>> = context.settingsDataStore.data.map { prefs ->
         prefs[hiddenKey(accountId)]?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()
@@ -153,6 +171,9 @@ class SettingsStore @Inject constructor(
         showChannelNumbers = this[Keys.SHOW_NUMBERS] ?: true,
         showHiddenChannels = this[Keys.SHOW_HIDDEN] ?: false,
         epgOffsetHours = this[Keys.EPG_OFFSET] ?: 0,
+        accentColor = enumOrDefault(this[Keys.ACCENT], AccentColor.BLUE),
+        showClock = this[Keys.SHOW_CLOCK] ?: true,
+        openLastChannelOnStart = this[Keys.OPEN_LAST] ?: false,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(value: String?, default: T): T =
@@ -169,5 +190,8 @@ class SettingsStore @Inject constructor(
         val SHOW_NUMBERS = booleanPreferencesKey("show_numbers")
         val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
         val EPG_OFFSET = intPreferencesKey("epg_offset_hours")
+        val ACCENT = stringPreferencesKey("accent_color")
+        val SHOW_CLOCK = booleanPreferencesKey("show_clock")
+        val OPEN_LAST = booleanPreferencesKey("open_last_channel")
     }
 }

@@ -5,22 +5,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFF3B82F6),
-    onPrimary = Color(0xFFFFFFFF),
-    secondary = Color(0xFF60A5FA),
-    background = Color(0xFF0E0F13),
-    onBackground = Color(0xFFE5E7EB),
-    surface = Color(0xFF181A20),
-    onSurface = Color(0xFFE5E7EB),
-    surfaceVariant = Color(0xFF1F2430),
-    border = Color(0xFF3B82F6),
-)
-
 @Composable
-fun IptvTheme(content: @Composable () -> Unit) {
+fun IptvTheme(accent: Color = Color(0xFF3B82F6), content: @Composable () -> Unit) {
+    val colors = darkColorScheme(
+        primary = accent,
+        onPrimary = Color(0xFFFFFFFF),
+        secondary = accent,
+        background = Color(0xFF0E0F13),
+        onBackground = Color(0xFFE5E7EB),
+        surface = Color(0xFF181A20),
+        onSurface = Color(0xFFE5E7EB),
+        surfaceVariant = Color(0xFF1F2430),
+        border = accent,
+    )
     MaterialTheme(
-        colorScheme = DarkColors,
+        colorScheme = colors,
         content = content,
     )
 }

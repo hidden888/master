@@ -3,6 +3,7 @@ package com.iptv.player.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptv.player.core.network.NetworkResult
+import com.iptv.player.core.util.AccentColor
 import com.iptv.player.core.util.AppSettings
 import com.iptv.player.core.util.AspectMode
 import com.iptv.player.core.util.BufferProfile
@@ -103,6 +104,18 @@ class SettingsViewModel @Inject constructor(
             settingsStore.setEpgOffsetHours(value)
             refreshEpg()
         }
+    }
+
+    fun setAccentColor(value: AccentColor) {
+        viewModelScope.launch { settingsStore.setAccentColor(value) }
+    }
+
+    fun setShowClock(value: Boolean) {
+        viewModelScope.launch { settingsStore.setShowClock(value) }
+    }
+
+    fun setOpenLastChannelOnStart(value: Boolean) {
+        viewModelScope.launch { settingsStore.setOpenLastChannelOnStart(value) }
     }
 
     fun setEpgUrl(value: String) {

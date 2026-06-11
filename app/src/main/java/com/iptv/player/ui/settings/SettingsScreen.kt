@@ -40,6 +40,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptv.player.core.ui.components.PrimaryButton
 import com.iptv.player.core.ui.components.TvTextField
+import com.iptv.player.core.util.AccentColor
 import com.iptv.player.core.util.AspectMode
 import com.iptv.player.core.util.BufferProfile
 import com.iptv.player.core.util.ChannelSort
@@ -74,6 +75,18 @@ fun SettingsScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text("Einstellungen", style = MaterialTheme.typography.headlineMedium, color = Color.White)
+
+        // ---- Darstellung ----
+        SectionTitle("Darstellung")
+        ChoiceRow(
+            label = "Akzentfarbe",
+            options = AccentColor.entries,
+            selected = settings.accentColor,
+            labelOf = { it.label },
+            onSelect = viewModel::setAccentColor,
+        )
+        ToggleRow("Uhr im Menü anzeigen", settings.showClock, viewModel::setShowClock)
+        ToggleRow("Letzten Sender beim Start öffnen", settings.openLastChannelOnStart, viewModel::setOpenLastChannelOnStart)
 
         // ---- Profil ----
         SectionTitle("Profil")

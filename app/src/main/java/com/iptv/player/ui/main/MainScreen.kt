@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,6 +37,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -44,6 +47,10 @@ import com.iptv.player.ui.favorites.FavoritesScreen
 import com.iptv.player.ui.live.LiveScreen
 import com.iptv.player.ui.series.SeriesBrowseScreen
 import com.iptv.player.ui.settings.SettingsScreen
+import kotlinx.coroutines.delay
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import com.iptv.player.ui.vod.VodBrowseScreen
 
 private enum class MainTab(val label: String, val icon: ImageVector) {
@@ -62,8 +69,26 @@ fun MainScreen(
     onOpenSeries: (Int) -> Unit,
     onSwitchProfile: () -> Unit,
     onAddAccount: () -> Unit,
+    viewModel: MainViewModel = hiltViewModel(),
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(MainTab.LIVE) }
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val startupChannel by viewModel.startupChannel.collectAsStateWithLifecycle()
+
+    LaunchedEffect(startupChannel) {
+        startupChannel?.let {
+            viewModel.consumeStartupChannel()
+            onPlayChannel(it)
+        }
+    }
+
+    var clockTick by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(settings.showClock) {
+        while (settings.showClock) {
+            clockTick = System.currentTimeMillis()
+            delay(30_000)
+        }
+    }
 
     Row(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -78,8 +103,21 @@ fun MainScreen(
                 text = "StreamDeck TV",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 16.dp),
+                modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
             )
+            if (settings.showClock) {
+                val timeText = remember(clockTick) {
+                    SimpleDateFormat("EEE  HH:mm", Locale.getDefault()).format(Date(clockTick))
+                }
+                Text(
+                    text = timeText,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color(0xFFB8C0CC),
+                    modifier = Modifier.padding(start = 8.dp, bottom = 12.dp),
+                )
+            } else {
+                Spacer(Modifier.padding(bottom = 8.dp))
+            }
             MainTab.entries.forEach { tab ->
                 SidebarItem(
                     label = tab.label,
