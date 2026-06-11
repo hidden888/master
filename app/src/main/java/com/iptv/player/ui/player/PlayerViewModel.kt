@@ -13,7 +13,10 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import com.iptv.player.core.util.AspectMode
 import com.iptv.player.core.util.SessionManager
+import com.iptv.player.core.util.SettingsStore
+import com.iptv.player.core.util.StreamFormat
 import com.iptv.player.core.util.StreamType
 import com.iptv.player.core.util.UrlBuilder
 import com.iptv.player.domain.model.Channel
@@ -39,6 +42,7 @@ data class PlayerUiState(
     val isBuffering: Boolean = true,
     val error: String? = null,
     val showChannelList: Boolean = false,
+    val aspectMode: AspectMode = AspectMode.FIT,
 )
 
 @OptIn(UnstableApi::class)
@@ -49,6 +53,7 @@ class PlayerViewModel @Inject constructor(
     private val liveRepository: LiveRepository,
     private val vodRepository: VodRepository,
     private val accountRepository: AccountRepository,
+    private val settingsStore: SettingsStore,
     private val sessionManager: SessionManager,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
@@ -59,14 +64,22 @@ class PlayerViewModel @Inject constructor(
     private var currentId: Int = savedStateHandle[Screen.Player.ARG_ID] ?: 0
     private val ext: String = savedStateHandle[Screen.Player.ARG_EXT] ?: "live"
 
-    private val _uiState = MutableStateFlow(PlayerUiState(isLive = type == StreamType.LIVE))
+    private val settings = settingsStore.snapshot
+
+    private val _uiState = MutableStateFlow(
+        PlayerUiState(isLive = type == StreamType.LIVE, aspectMode = settings.aspectMode),
+    )
     val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
 
     private val _channels = MutableStateFlow<List<Channel>>(emptyList())
     val channels: StateFlow<List<Channel>> = _channels.asStateFlow()
 
-    /** Live format fallback: prefer HLS, fall back to raw TS on the first failure. */
-    private val liveFormats = listOf("m3u8", "ts")
+    /** Live container order, with a fallback to the other format on the first failure. */
+    private val liveFormats: List<String> = when (settings.streamFormat) {
+        StreamFormat.HLS -> listOf("m3u8")
+        StreamFormat.TS -> listOf("ts", "m3u8")
+        StreamFormat.AUTO -> listOf("m3u8", "ts")
+    }
     private var formatIndex = 0
 
     private var currentBase = ""
@@ -95,7 +108,12 @@ class PlayerViewModel @Inject constructor(
         .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
         .setLoadControl(
             DefaultLoadControl.Builder()
-                .setBufferDurationsMs(15_000, 50_000, 2_000, 5_000)
+                .setBufferDurationsMs(
+                    settings.bufferProfile.minMs,
+                    settings.bufferProfile.maxMs,
+                    settings.bufferProfile.playbackMs,
+                    settings.bufferProfile.rebufferMs,
+                )
                 .build(),
         )
         .build()

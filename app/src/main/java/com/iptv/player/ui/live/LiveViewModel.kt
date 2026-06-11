@@ -3,7 +3,9 @@ package com.iptv.player.ui.live
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptv.player.core.network.NetworkResult
+import com.iptv.player.core.util.ChannelSort
 import com.iptv.player.core.util.SessionManager
+import com.iptv.player.core.util.SettingsStore
 import com.iptv.player.core.util.StreamType
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Channel
@@ -38,6 +40,7 @@ class LiveViewModel @Inject constructor(
     private val liveRepository: LiveRepository,
     private val epgRepository: EpgRepository,
     private val favoriteRepository: FavoriteRepository,
+    private val settingsStore: SettingsStore,
     private val sessionManager: SessionManager,
 ) : ViewModel() {
 
@@ -54,8 +57,11 @@ class LiveViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val channels: StateFlow<List<Channel>> =
-        combine(accountId.filterNotNull(), _selectedCategoryId) { id, cat -> id to cat }
-            .flatMapLatest { (id, cat) -> liveRepository.observeChannels(id, cat) }
+        combine(
+            combine(accountId.filterNotNull(), _selectedCategoryId) { id, cat -> id to cat }
+                .flatMapLatest { (id, cat) -> liveRepository.observeChannels(id, cat) },
+            settingsStore.settings,
+        ) { list, settings -> list.sortedFor(settings.channelSort) }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Currently airing program per EPG channel id, for the now/next labels. */
@@ -82,6 +88,12 @@ class LiveViewModel @Inject constructor(
                 epgRepository.refreshEpg(id)
             }
         }
+    }
+
+    private fun List<Channel>.sortedFor(sort: ChannelSort): List<Channel> = when (sort) {
+        ChannelSort.NAME -> sortedBy { it.name.lowercase() }
+        ChannelSort.NUMBER -> sortedBy { it.num }
+        ChannelSort.DEFAULT -> this
     }
 
     fun selectCategory(categoryId: String) {

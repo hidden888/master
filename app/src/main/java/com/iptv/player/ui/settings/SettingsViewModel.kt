@@ -3,7 +3,13 @@ package com.iptv.player.ui.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptv.player.core.network.NetworkResult
+import com.iptv.player.core.util.AppSettings
+import com.iptv.player.core.util.AspectMode
+import com.iptv.player.core.util.BufferProfile
+import com.iptv.player.core.util.ChannelSort
 import com.iptv.player.core.util.SessionManager
+import com.iptv.player.core.util.SettingsStore
+import com.iptv.player.core.util.StreamFormat
 import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.repository.AccountRepository
 import com.iptv.player.domain.repository.EpgRepository
@@ -28,8 +34,12 @@ class SettingsViewModel @Inject constructor(
     private val vodRepository: VodRepository,
     private val seriesRepository: SeriesRepository,
     private val epgRepository: EpgRepository,
+    private val settingsStore: SettingsStore,
     private val sessionManager: SessionManager,
 ) : ViewModel() {
+
+    val settings: StateFlow<AppSettings> = settingsStore.settings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
 
     val accounts: StateFlow<List<Account>> = accountRepository.observeAccounts()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -52,6 +62,29 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             sessionManager.setActiveAccount(id)
             _accountSwitched.value = true
+        }
+    }
+
+    fun setStreamFormat(value: StreamFormat) {
+        viewModelScope.launch { settingsStore.setStreamFormat(value) }
+    }
+
+    fun setChannelSort(value: ChannelSort) {
+        viewModelScope.launch { settingsStore.setChannelSort(value) }
+    }
+
+    fun setAspectMode(value: AspectMode) {
+        viewModelScope.launch { settingsStore.setAspectMode(value) }
+    }
+
+    fun setBufferProfile(value: BufferProfile) {
+        viewModelScope.launch { settingsStore.setBufferProfile(value) }
+    }
+
+    fun setEpgUrl(value: String) {
+        viewModelScope.launch {
+            settingsStore.setEpgUrl(value)
+            refreshEpg()
         }
     }
 

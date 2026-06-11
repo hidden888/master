@@ -3,6 +3,7 @@ package com.iptv.player.ui.settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -18,11 +19,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,6 +35,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptv.player.core.ui.components.PrimaryButton
+import com.iptv.player.core.ui.components.TvTextField
+import com.iptv.player.core.util.AspectMode
+import com.iptv.player.core.util.BufferProfile
+import com.iptv.player.core.util.ChannelSort
+import com.iptv.player.core.util.StreamFormat
 import com.iptv.player.domain.model.Account
 
 @Composable
@@ -38,11 +48,14 @@ fun SettingsScreen(
     onAddAccount: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
     val accounts by viewModel.accounts.collectAsStateWithLifecycle()
     val activeAccountId by viewModel.activeAccountId.collectAsStateWithLifecycle()
     val accountSwitched by viewModel.accountSwitched.collectAsStateWithLifecycle()
     val status by viewModel.status.collectAsStateWithLifecycle()
     val busy by viewModel.busy.collectAsStateWithLifecycle()
+
+    var epgUrl by remember(settings.epgUrl) { mutableStateOf(settings.epgUrl) }
 
     LaunchedEffect(accountSwitched) {
         if (accountSwitched) onSwitchProfile()
@@ -53,21 +66,72 @@ fun SettingsScreen(
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(32.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text("Einstellungen", style = MaterialTheme.typography.headlineMedium, color = Color.White)
 
+        // ---- Profil ----
         SectionTitle("Profil")
         PrimaryButton(text = "Profil wechseln", onClick = onSwitchProfile)
 
-        SectionTitle("Inhalte")
+        // ---- Player ----
+        SectionTitle("Player")
+        ChoiceRow(
+            label = "Stream-Format (Live)",
+            options = StreamFormat.entries,
+            selected = settings.streamFormat,
+            labelOf = { it.label },
+            onSelect = viewModel::setStreamFormat,
+        )
+        ChoiceRow(
+            label = "Seitenverhältnis",
+            options = AspectMode.entries,
+            selected = settings.aspectMode,
+            labelOf = { it.label },
+            onSelect = viewModel::setAspectMode,
+        )
+        ChoiceRow(
+            label = "Puffer",
+            options = BufferProfile.entries,
+            selected = settings.bufferProfile,
+            labelOf = { it.label },
+            onSelect = viewModel::setBufferProfile,
+        )
         Text(
-            text = "Lädt den Programmführer (EPG) neu. Falls dein Anbieter kein XMLTV hat, " +
-                "wird automatisch Now/Next pro Sender geholt.",
+            text = "Format/Puffer greifen ab der nächsten Wiedergabe.",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color(0xFFB8C0CC),
+        )
+
+        // ---- Sender ----
+        SectionTitle("Sender")
+        ChoiceRow(
+            label = "Sortierung",
+            options = ChannelSort.entries,
+            selected = settings.channelSort,
+            labelOf = { it.label },
+            onSelect = viewModel::setChannelSort,
+        )
+
+        // ---- EPG ----
+        SectionTitle("Programmführer (EPG)")
+        Text(
+            text = "Eigene XMLTV-URL (optional). Leer = Standard des Anbieters. " +
+                "Schlägt das XMLTV fehl, holt die App Now/Next je Sender automatisch.",
             style = MaterialTheme.typography.bodySmall,
             color = Color(0xFFB8C0CC),
         )
+        TvTextField(
+            value = epgUrl,
+            onValueChange = { epgUrl = it },
+            label = "EPG-URL (z. B. http://server/xmltv.php?username=…)",
+            keyboardType = KeyboardType.Uri,
+            imeAction = ImeAction.Done,
+            onImeAction = { viewModel.setEpgUrl(epgUrl) },
+            modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
+        )
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            PrimaryButton(text = "EPG-URL speichern & laden", onClick = { viewModel.setEpgUrl(epgUrl) }, enabled = !busy)
             PrimaryButton(text = "Programmführer aktualisieren", onClick = viewModel::refreshEpg, enabled = !busy)
             PrimaryButton(text = "Sender/Filme/Serien neu laden", onClick = viewModel::reloadCatalogs, enabled = !busy)
         }
@@ -75,6 +139,7 @@ fun SettingsScreen(
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
         }
 
+        // ---- Konten ----
         SectionTitle("Konten")
         Column(
             modifier = Modifier.fillMaxWidth().widthIn(max = 720.dp),
@@ -109,8 +174,59 @@ private fun SectionTitle(text: String) {
         text = text,
         style = MaterialTheme.typography.titleLarge,
         color = Color.White,
-        modifier = Modifier.padding(top = 8.dp),
+        modifier = Modifier.padding(top = 10.dp),
     )
+}
+
+@Composable
+private fun <T> ChoiceRow(
+    label: String,
+    options: List<T>,
+    selected: T,
+    labelOf: (T) -> String,
+    onSelect: (T) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.titleMedium, color = Color.White)
+        Row(
+            modifier = Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            options.forEach { option ->
+                Chip(
+                    text = labelOf(option),
+                    selected = option == selected,
+                    onClick = { onSelect(option) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val bg = when {
+        isFocused -> MaterialTheme.colorScheme.primary
+        selected -> MaterialTheme.colorScheme.surfaceVariant
+        else -> Color(0x14FFFFFF)
+    }
+    val borderColor = when {
+        isFocused -> Color.White
+        selected -> MaterialTheme.colorScheme.primary
+        else -> Color.Transparent
+    }
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(bg, RoundedCornerShape(20.dp))
+            .border(2.dp, borderColor, RoundedCornerShape(20.dp))
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) {
+        Text(text, color = Color.White, style = MaterialTheme.typography.labelLarge)
+    }
 }
 
 @Composable

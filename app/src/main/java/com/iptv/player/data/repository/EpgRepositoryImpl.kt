@@ -2,6 +2,7 @@ package com.iptv.player.data.repository
 
 import com.iptv.player.core.network.NetworkResult
 import com.iptv.player.core.util.CredentialCrypto
+import com.iptv.player.core.util.SettingsStore
 import com.iptv.player.core.util.UrlBuilder
 import com.iptv.player.data.local.dao.AccountDao
 import com.iptv.player.data.local.dao.ChannelDao
@@ -33,6 +34,7 @@ class EpgRepositoryImpl @Inject constructor(
     private val epgDao: EpgDao,
     private val crypto: CredentialCrypto,
     private val xmltvParser: XmltvParser,
+    private val settingsStore: SettingsStore,
 ) : EpgRepository {
 
     override fun observeCurrentByChannel(accountId: Long): Flow<Map<String, EpgProgram>> =
@@ -50,9 +52,12 @@ class EpgRepositoryImpl @Inject constructor(
             ?: return NetworkResult.Error(404, "Konto nicht gefunden.")
         val pass = crypto.decrypt(account.password)
 
-        // 1) Try the full XMLTV dump (one request, complete guide).
-        val xmltvEntities = runCatching { downloadXmltv(accountId, account.baseUrl, account.username, pass) }
-            .getOrElse { emptyList() }
+        val customEpgUrl = settingsStore.settings.first().epgUrl.trim()
+
+        // 1) Try the full XMLTV dump (custom URL if set, else {base}/xmltv.php).
+        val xmltvEntities = runCatching {
+            downloadXmltv(accountId, account.baseUrl, account.username, pass, customEpgUrl)
+        }.getOrElse { emptyList() }
 
         val entities = xmltvEntities.ifEmpty {
             // 2) Fallback: many providers serve no usable xmltv.php but do answer get_short_epg
@@ -80,8 +85,13 @@ class EpgRepositoryImpl @Inject constructor(
         baseUrl: String,
         username: String,
         pass: String,
+        customUrl: String,
     ): List<EpgProgramEntity> {
-        val response = api.getXmltv(UrlBuilder.xmltv(baseUrl), username, pass)
+        val response = if (customUrl.isNotBlank()) {
+            api.getXmltvRaw(customUrl)
+        } else {
+            api.getXmltv(UrlBuilder.xmltv(baseUrl), username, pass)
+        }
         val body = response.body() ?: return emptyList()
         if (!response.isSuccessful) return emptyList()
         val parsed = body.byteStream().use { xmltvParser.parse(it) }

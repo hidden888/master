@@ -115,4 +115,9 @@ interface XtreamApiService {
         @Query("username") username: String,
         @Query("password") password: String,
     ): Response<ResponseBody>
+
+    /** XMLTV dump from a user-supplied full URL (credentials, if any, are part of the URL). */
+    @Streaming
+    @GET
+    suspend fun getXmltvRaw(@Url url: String): Response<ResponseBody>
 }

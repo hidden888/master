@@ -38,12 +38,14 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.tv.foundation.lazy.list.TvLazyColumn
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.iptv.player.core.ui.components.ErrorView
+import com.iptv.player.core.util.AspectMode
 import com.iptv.player.domain.model.Channel
 
 @OptIn(UnstableApi::class)
@@ -93,12 +95,18 @@ fun PlayerScreen(
     }
 
     Box(modifier = rootModifier) {
+        val resizeMode = when (uiState.aspectMode) {
+            AspectMode.FIT -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+            AspectMode.FILL -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+            AspectMode.ZOOM -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+        }
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { context ->
                 PlayerView(context).apply {
                     useController = !uiState.isLive
                     keepScreenOn = true
+                    setResizeMode(resizeMode)
                     layoutParams = ViewGroup.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
@@ -106,7 +114,10 @@ fun PlayerScreen(
                     player = viewModel.player
                 }
             },
-            update = { it.player = viewModel.player },
+            update = {
+                it.player = viewModel.player
+                it.setResizeMode(resizeMode)
+            },
         )
 
         when {
