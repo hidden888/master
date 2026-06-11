@@ -2,8 +2,10 @@ package com.iptv.player.core.util
 
 import android.content.Context
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -66,6 +68,10 @@ data class AppSettings(
     val aspectMode: AspectMode = AspectMode.FIT,
     val bufferProfile: BufferProfile = BufferProfile.NORMAL,
     val decoderMode: DecoderMode = DecoderMode.HW_FALLBACK,
+    val showChannelLogos: Boolean = true,
+    val showChannelNumbers: Boolean = true,
+    /** When on, hidden channels stay visible (so they can be un-hidden). */
+    val showHiddenChannels: Boolean = false,
 )
 
 private val Context.settingsDataStore by preferencesDataStore(name = "app_settings")
@@ -101,9 +107,33 @@ class SettingsStore @Inject constructor(
     suspend fun setBufferProfile(value: BufferProfile) = put(Keys.BUFFER_PROFILE, value.name)
     suspend fun setDecoderMode(value: DecoderMode) = put(Keys.DECODER_MODE, value.name)
 
+    suspend fun setShowChannelLogos(value: Boolean) = putBool(Keys.SHOW_LOGOS, value)
+    suspend fun setShowChannelNumbers(value: Boolean) = putBool(Keys.SHOW_NUMBERS, value)
+    suspend fun setShowHiddenChannels(value: Boolean) = putBool(Keys.SHOW_HIDDEN, value)
+
+    /** Hidden channel stream ids for a given account. */
+    fun hiddenChannels(accountId: Long): Flow<Set<Int>> = context.settingsDataStore.data.map { prefs ->
+        prefs[hiddenKey(accountId)]?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()
+    }
+
+    suspend fun setChannelHidden(accountId: Long, streamId: Int, hidden: Boolean) {
+        context.settingsDataStore.edit { prefs ->
+            val key = hiddenKey(accountId)
+            val current = prefs[key]?.toMutableSet() ?: mutableSetOf()
+            if (hidden) current.add(streamId.toString()) else current.remove(streamId.toString())
+            prefs[key] = current
+        }
+    }
+
     private suspend fun put(key: Preferences.Key<String>, value: String) {
         context.settingsDataStore.edit { it[key] = value }
     }
+
+    private suspend fun putBool(key: Preferences.Key<Boolean>, value: Boolean) {
+        context.settingsDataStore.edit { it[key] = value }
+    }
+
+    private fun hiddenKey(accountId: Long) = stringSetPreferencesKey("hidden_channels_$accountId")
 
     private fun Preferences.toAppSettings() = AppSettings(
         epgUrl = this[Keys.EPG_URL] ?: "",
@@ -112,6 +142,9 @@ class SettingsStore @Inject constructor(
         aspectMode = enumOrDefault(this[Keys.ASPECT_MODE], AspectMode.FIT),
         bufferProfile = enumOrDefault(this[Keys.BUFFER_PROFILE], BufferProfile.NORMAL),
         decoderMode = enumOrDefault(this[Keys.DECODER_MODE], DecoderMode.HW_FALLBACK),
+        showChannelLogos = this[Keys.SHOW_LOGOS] ?: true,
+        showChannelNumbers = this[Keys.SHOW_NUMBERS] ?: true,
+        showHiddenChannels = this[Keys.SHOW_HIDDEN] ?: false,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(value: String?, default: T): T =
@@ -124,5 +157,8 @@ class SettingsStore @Inject constructor(
         val ASPECT_MODE = stringPreferencesKey("aspect_mode")
         val BUFFER_PROFILE = stringPreferencesKey("buffer_profile")
         val DECODER_MODE = stringPreferencesKey("decoder_mode")
+        val SHOW_LOGOS = booleanPreferencesKey("show_logos")
+        val SHOW_NUMBERS = booleanPreferencesKey("show_numbers")
+        val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
     }
 }

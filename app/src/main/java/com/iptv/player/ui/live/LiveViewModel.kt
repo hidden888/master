@@ -3,6 +3,7 @@ package com.iptv.player.ui.live
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptv.player.core.network.NetworkResult
+import com.iptv.player.core.util.AppSettings
 import com.iptv.player.core.util.ChannelSort
 import com.iptv.player.core.util.SessionManager
 import com.iptv.player.core.util.SettingsStore
@@ -52,17 +53,34 @@ class LiveViewModel @Inject constructor(
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
+    private val _query = MutableStateFlow("")
+    val query: StateFlow<String> = _query.asStateFlow()
+
+    val settings: StateFlow<AppSettings> = settingsStore.settings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
+
     val categories: StateFlow<List<Category>> = accountId.filterNotNull()
         .flatMapLatest { liveRepository.observeCategories(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    private val hiddenChannels: StateFlow<Set<Int>> = accountId.filterNotNull()
+        .flatMapLatest { settingsStore.hiddenChannels(it) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    val hiddenIds: StateFlow<Set<Int>> = hiddenChannels
+
+    private val rawChannels =
+        combine(accountId.filterNotNull(), _selectedCategoryId) { id, cat -> id to cat }
+            .flatMapLatest { (id, cat) -> liveRepository.observeChannels(id, cat) }
+
     val channels: StateFlow<List<Channel>> =
-        combine(
-            combine(accountId.filterNotNull(), _selectedCategoryId) { id, cat -> id to cat }
-                .flatMapLatest { (id, cat) -> liveRepository.observeChannels(id, cat) },
-            settingsStore.settings,
-        ) { list, settings -> list.sortedFor(settings.channelSort) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        combine(rawChannels, settingsStore.settings, hiddenChannels, _query) { list, settings, hidden, query ->
+            list.asSequence()
+                .filter { settings.showHiddenChannels || it.streamId !in hidden }
+                .filter { query.isBlank() || it.name.contains(query, ignoreCase = true) }
+                .toList()
+                .sortedFor(settings.channelSort)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Currently airing program per EPG channel id, for the now/next labels. */
     val currentPrograms: StateFlow<Map<String, EpgProgram>> = accountId.filterNotNull()
@@ -98,6 +116,15 @@ class LiveViewModel @Inject constructor(
 
     fun selectCategory(categoryId: String) {
         _selectedCategoryId.value = categoryId
+    }
+
+    fun setQuery(value: String) {
+        _query.value = value
+    }
+
+    fun setChannelHidden(streamId: Int, hidden: Boolean) {
+        val id = accountId.value ?: return
+        viewModelScope.launch { settingsStore.setChannelHidden(id, streamId, hidden) }
     }
 
     fun toggleFavorite(streamId: Int) {

@@ -7,11 +7,14 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -121,6 +124,14 @@ fun SettingsScreen(
             labelOf = { it.label },
             onSelect = viewModel::setChannelSort,
         )
+        ToggleRow("Sendernummern anzeigen", settings.showChannelNumbers, viewModel::setShowChannelNumbers)
+        ToggleRow("Senderlogos anzeigen", settings.showChannelLogos, viewModel::setShowChannelLogos)
+        ToggleRow("Ausgeblendete Sender anzeigen", settings.showHiddenChannels, viewModel::setShowHiddenChannels)
+        Text(
+            text = "Sender ausblenden/einblenden: im Live-Tab lange auf einen Sender drücken (Kontextmenü).",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color(0xFFB8C0CC),
+        )
 
         // ---- EPG ----
         SectionTitle("Programmführer (EPG)")
@@ -209,6 +220,41 @@ private fun <T> ChoiceRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ToggleRow(label: String, checked: Boolean, onToggle: (Boolean) -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val borderColor = if (isFocused) Color.White else Color.Transparent
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .widthIn(max = 720.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .border(2.dp, borderColor, RoundedCornerShape(8.dp))
+            .clickable(interactionSource = interactionSource, indication = null, onClick = { onToggle(!checked) })
+            .padding(horizontal = 12.dp, vertical = 12.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp, 24.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (checked) MaterialTheme.colorScheme.primary else Color(0x33FFFFFF)),
+            contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(3.dp)
+                    .size(18.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(Color.White),
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(label, color = Color.White, style = MaterialTheme.typography.bodyLarge)
     }
 }
 

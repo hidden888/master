@@ -86,6 +86,18 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsStore.setDecoderMode(value) }
     }
 
+    fun setShowChannelLogos(value: Boolean) {
+        viewModelScope.launch { settingsStore.setShowChannelLogos(value) }
+    }
+
+    fun setShowChannelNumbers(value: Boolean) {
+        viewModelScope.launch { settingsStore.setShowChannelNumbers(value) }
+    }
+
+    fun setShowHiddenChannels(value: Boolean) {
+        viewModelScope.launch { settingsStore.setShowHiddenChannels(value) }
+    }
+
     fun setEpgUrl(value: String) {
         viewModelScope.launch {
             settingsStore.setEpgUrl(value)
