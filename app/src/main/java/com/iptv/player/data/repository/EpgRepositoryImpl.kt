@@ -1,6 +1,7 @@
 package com.iptv.player.data.repository
 
 import com.iptv.player.core.network.NetworkResult
+import com.iptv.player.core.util.AccountType
 import com.iptv.player.core.util.CredentialCrypto
 import com.iptv.player.core.util.SettingsStore
 import com.iptv.player.core.util.UrlBuilder
@@ -65,10 +66,14 @@ class EpgRepositoryImpl @Inject constructor(
         }.getOrElse { emptyList() }
 
         val entities = xmltvEntities.ifEmpty {
-            // 2) Fallback: many providers serve no usable xmltv.php but do answer get_short_epg
-            //    per stream. Pull a few upcoming entries per channel instead.
-            runCatching { downloadShortEpg(accountId, account.baseUrl, account.username, pass) }
-                .getOrElse { return NetworkResult.Exception(it) }
+            // 2) Fallback (Xtream only): providers without a usable xmltv.php still answer
+            //    get_short_epg per stream. M3U accounts have no such API, so skip it.
+            if (account.type == AccountType.XTREAM) {
+                runCatching { downloadShortEpg(accountId, account.baseUrl, account.username, pass) }
+                    .getOrElse { return NetworkResult.Exception(it) }
+            } else {
+                emptyList()
+            }
         }
 
         if (entities.isEmpty()) {

@@ -57,6 +57,7 @@ fun ChannelEntity.toDomain() = Channel(
     epgChannelId = epgChannelId,
     categoryId = categoryId,
     tvArchive = tvArchive,
+    streamUrl = streamUrl,
 )
 
 fun ProfileEntity.toDomain() = Profile(
@@ -73,6 +74,7 @@ fun AccountEntity.toDomain(decryptedPassword: String) = Account(
     baseUrl = baseUrl,
     username = username,
     password = decryptedPassword,
+    type = type,
 )
 
 fun VodStreamDto.toEntity(accountId: Long) = VodEntity(

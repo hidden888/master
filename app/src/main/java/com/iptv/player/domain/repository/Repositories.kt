@@ -26,6 +26,13 @@ interface AccountRepository {
         username: String,
         password: String,
     ): NetworkResult<Long>
+
+    /** Validates and persists an M3U playlist account. Returns its id. */
+    suspend fun saveM3uAccount(
+        name: String,
+        playlistUrl: String,
+        epgUrl: String,
+    ): NetworkResult<Long>
 }
 
 interface LiveRepository {

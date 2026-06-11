@@ -1,12 +1,15 @@
 package com.iptv.player.data.repository
 
 import com.iptv.player.core.network.NetworkResult
+import com.iptv.player.core.util.AccountType
 import com.iptv.player.core.util.CredentialCrypto
+import com.iptv.player.core.util.SettingsStore
 import com.iptv.player.core.util.UrlBuilder
 import com.iptv.player.data.local.dao.AccountDao
 import com.iptv.player.data.local.entity.AccountEntity
 import com.iptv.player.data.mapper.toDomain
 import com.iptv.player.data.remote.api.XtreamApiService
+import com.iptv.player.data.remote.m3u.M3uParser
 import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.repository.AccountRepository
 import kotlinx.coroutines.flow.Flow
@@ -17,6 +20,8 @@ class AccountRepositoryImpl @Inject constructor(
     private val api: XtreamApiService,
     private val accountDao: AccountDao,
     private val crypto: CredentialCrypto,
+    private val m3uParser: M3uParser,
+    private val settingsStore: SettingsStore,
 ) : AccountRepository {
 
     override fun observeAccounts(): Flow<List<Account>> =
@@ -58,8 +63,47 @@ class AccountRepositoryImpl @Inject constructor(
                 baseUrl = normalized,
                 username = username,
                 password = crypto.encrypt(password),
+                type = AccountType.XTREAM,
             ),
         )
+        return NetworkResult.Success(id)
+    }
+
+    override suspend fun saveM3uAccount(
+        name: String,
+        playlistUrl: String,
+        epgUrl: String,
+    ): NetworkResult<Long> {
+        val url = UrlBuilder.normalizeBaseUrl(playlistUrl)
+        val playlist = try {
+            val response = api.getXmltvRaw(url)
+            val body = response.body()
+            if (!response.isSuccessful || body == null) {
+                return NetworkResult.Error(response.code(), "Playlist konnte nicht geladen werden.")
+            }
+            val text = body.byteStream().bufferedReader().use { it.readText() }
+            m3uParser.parse(text)
+        } catch (t: Throwable) {
+            return NetworkResult.Exception(t)
+        }
+
+        if (playlist.entries.isEmpty()) {
+            return NetworkResult.Error(204, "Keine Sender in der Playlist gefunden.")
+        }
+
+        val id = accountDao.upsert(
+            AccountEntity(
+                name = name.ifBlank { "M3U-Playlist" },
+                baseUrl = url,
+                username = "",
+                password = crypto.encrypt(""),
+                type = AccountType.M3U,
+            ),
+        )
+        val effectiveEpg = epgUrl.trim().ifBlank { playlist.epgUrl.orEmpty() }
+        if (effectiveEpg.isNotBlank()) {
+            settingsStore.setEpgUrl(effectiveEpg)
+        }
         return NetworkResult.Success(id)
     }
 }

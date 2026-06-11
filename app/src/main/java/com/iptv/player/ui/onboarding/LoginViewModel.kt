@@ -53,6 +53,28 @@ class LoginViewModel @Inject constructor(
         }
     }
 
+    fun loginM3u(name: String, playlistUrl: String, epgUrl: String) {
+        if (playlistUrl.isBlank()) {
+            _uiState.value = LoginUiState.Error("Bitte die Playlist-URL (M3U) ausfüllen.")
+            return
+        }
+        _uiState.value = LoginUiState.Loading
+        viewModelScope.launch {
+            when (val result = accountRepository.saveM3uAccount(name, playlistUrl, epgUrl)) {
+                is NetworkResult.Success -> {
+                    val accountId = result.data
+                    sessionManager.setActiveAccount(accountId)
+                    liveRepository.syncLive(accountId)
+                    _uiState.value = LoginUiState.Success
+                }
+                is NetworkResult.Error -> _uiState.value = LoginUiState.Error(result.message)
+                is NetworkResult.Exception -> _uiState.value = LoginUiState.Error(
+                    result.throwable.message ?: "Playlist konnte nicht geladen werden.",
+                )
+            }
+        }
+    }
+
     fun resetError() {
         if (_uiState.value is LoginUiState.Error) _uiState.value = LoginUiState.Idle
     }

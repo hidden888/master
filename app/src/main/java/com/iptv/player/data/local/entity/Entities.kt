@@ -3,16 +3,19 @@ package com.iptv.player.data.local.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.iptv.player.core.util.AccountType
 import com.iptv.player.core.util.StreamType
 
 @Entity(tableName = "accounts")
 data class AccountEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
+    /** Xtream server base, or the playlist URL for M3U accounts. */
     val baseUrl: String,
     val username: String,
     /** Stored encrypted via CredentialCrypto. */
     val password: String,
+    val type: AccountType = AccountType.XTREAM,
     val createdAt: Long = System.currentTimeMillis(),
     val lastUsed: Long = System.currentTimeMillis(),
 )
@@ -45,6 +48,8 @@ data class ChannelEntity(
     val epgChannelId: String? = null,
     val categoryId: String? = null,
     val tvArchive: Boolean = false,
+    /** Direct stream URL for M3U channels; null for Xtream (URL is built on demand). */
+    val streamUrl: String? = null,
 )
 
 @Entity(

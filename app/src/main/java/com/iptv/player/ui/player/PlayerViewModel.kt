@@ -258,8 +258,11 @@ class PlayerViewModel @Inject constructor(
     }
 
     private fun play() {
+        val directUrl = _channels.value.firstOrNull { it.streamId == currentId }?.streamUrl
         val url = when (type) {
-            StreamType.LIVE -> UrlBuilder.liveUrl(currentBase, currentUser, currentPass, currentId, liveFormats[formatIndex])
+            StreamType.LIVE ->
+                if (!directUrl.isNullOrBlank()) directUrl
+                else UrlBuilder.liveUrl(currentBase, currentUser, currentPass, currentId, liveFormats[formatIndex])
             StreamType.VOD -> UrlBuilder.vodUrl(currentBase, currentUser, currentPass, currentId, ext)
             StreamType.SERIES -> UrlBuilder.seriesUrl(currentBase, currentUser, currentPass, currentId, ext)
         }

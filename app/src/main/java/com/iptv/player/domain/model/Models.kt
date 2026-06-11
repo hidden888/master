@@ -1,5 +1,6 @@
 package com.iptv.player.domain.model
 
+import com.iptv.player.core.util.AccountType
 import com.iptv.player.core.util.StreamType
 
 data class Account(
@@ -8,6 +9,7 @@ data class Account(
     val baseUrl: String,
     val username: String,
     val password: String,
+    val type: AccountType = AccountType.XTREAM,
 )
 
 data class Profile(
@@ -32,6 +34,8 @@ data class Channel(
     val epgChannelId: String?,
     val categoryId: String?,
     val tvArchive: Boolean,
+    /** Direct stream URL (M3U); null for Xtream. */
+    val streamUrl: String? = null,
 )
 
 /** Currently airing / upcoming program for a channel. */
