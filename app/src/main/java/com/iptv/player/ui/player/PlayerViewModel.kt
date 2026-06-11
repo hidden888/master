@@ -5,20 +5,30 @@ import androidx.annotation.OptIn
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.TrackGroup
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.mediacodec.MediaCodecInfo
+import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.iptv.player.core.util.AspectMode
+import com.iptv.player.core.util.DecoderMode
 import com.iptv.player.core.util.SessionManager
 import com.iptv.player.core.util.SettingsStore
 import com.iptv.player.core.util.StreamFormat
 import com.iptv.player.core.util.StreamType
 import com.iptv.player.core.util.UrlBuilder
+import java.util.Locale
 import com.iptv.player.domain.model.Channel
 import com.iptv.player.domain.repository.AccountRepository
 import com.iptv.player.domain.repository.CATEGORY_ALL
@@ -42,7 +52,18 @@ data class PlayerUiState(
     val isBuffering: Boolean = true,
     val error: String? = null,
     val showChannelList: Boolean = false,
+    val showOptions: Boolean = false,
     val aspectMode: AspectMode = AspectMode.FIT,
+    val playbackSpeed: Float = 1f,
+)
+
+/** One selectable entry in the player's track menus. */
+data class TrackOption(val key: Int, val label: String, val selected: Boolean)
+
+data class PlayerTracks(
+    val audio: List<TrackOption> = emptyList(),
+    val text: List<TrackOption> = emptyList(),
+    val video: List<TrackOption> = emptyList(),
 )
 
 @OptIn(UnstableApi::class)
@@ -74,6 +95,14 @@ class PlayerViewModel @Inject constructor(
     private val _channels = MutableStateFlow<List<Channel>>(emptyList())
     val channels: StateFlow<List<Channel>> = _channels.asStateFlow()
 
+    private val _tracks = MutableStateFlow(PlayerTracks())
+    val tracks: StateFlow<PlayerTracks> = _tracks.asStateFlow()
+
+    /** Flattened (group, indexInGroup) per track type, indexed by the keys exposed in [tracks]. */
+    private val audioTracks = mutableListOf<Pair<TrackGroup, Int>>()
+    private val textTracks = mutableListOf<Pair<TrackGroup, Int>>()
+    private val videoTracks = mutableListOf<Pair<TrackGroup, Int>>()
+
     /** Live container order, with a fallback to the other format on the first failure. */
     private val liveFormats: List<String> = when (settings.streamFormat) {
         StreamFormat.HLS -> listOf("m3u8")
@@ -91,6 +120,10 @@ class PlayerViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isBuffering = state == Player.STATE_BUFFERING)
         }
 
+        override fun onTracksChanged(tracks: Tracks) {
+            refreshTracks(tracks)
+        }
+
         override fun onPlayerError(error: PlaybackException) {
             if (type == StreamType.LIVE && formatIndex < liveFormats.lastIndex) {
                 formatIndex++
@@ -104,7 +137,21 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    val player: ExoPlayer = ExoPlayer.Builder(context)
+    /** Prefer software decoders when requested; otherwise keep the platform default order. */
+    private val codecSelector = MediaCodecSelector { mime, secure, tunneling ->
+        val infos: List<MediaCodecInfo> = MediaCodecSelector.DEFAULT.getDecoderInfos(mime, secure, tunneling)
+        if (settings.decoderMode == DecoderMode.SOFTWARE) {
+            infos.sortedByDescending { it.softwareOnly }
+        } else {
+            infos
+        }
+    }
+
+    private val renderersFactory = DefaultRenderersFactory(context)
+        .setEnableDecoderFallback(settings.decoderMode != DecoderMode.HARDWARE)
+        .setMediaCodecSelector(codecSelector)
+
+    val player: ExoPlayer = ExoPlayer.Builder(context, renderersFactory)
         .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
         .setLoadControl(
             DefaultLoadControl.Builder()
@@ -195,13 +242,135 @@ class PlayerViewModel @Inject constructor(
 
     fun toggleChannelList() {
         if (type != StreamType.LIVE) return
-        _uiState.value = _uiState.value.copy(showChannelList = !_uiState.value.showChannelList)
+        _uiState.value = _uiState.value.copy(showChannelList = !_uiState.value.showChannelList, showOptions = false)
     }
 
     fun hideChannelList() {
         if (_uiState.value.showChannelList) {
             _uiState.value = _uiState.value.copy(showChannelList = false)
         }
+    }
+
+    fun toggleOptions() {
+        _uiState.value = _uiState.value.copy(
+            showOptions = !_uiState.value.showOptions,
+            showChannelList = false,
+        )
+    }
+
+    fun hideOptions() {
+        if (_uiState.value.showOptions) {
+            _uiState.value = _uiState.value.copy(showOptions = false)
+        }
+    }
+
+    fun cycleAspect() {
+        val modes = AspectMode.entries
+        val next = modes[(modes.indexOf(_uiState.value.aspectMode) + 1) % modes.size]
+        _uiState.value = _uiState.value.copy(aspectMode = next)
+    }
+
+    fun setSpeed(speed: Float) {
+        player.setPlaybackSpeed(speed)
+        _uiState.value = _uiState.value.copy(playbackSpeed = speed)
+    }
+
+    fun selectAudio(key: Int) {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+            if (key == AUTO) {
+                clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+            } else {
+                audioTracks.getOrNull(key)?.let { setOverrideForType(TrackSelectionOverride(it.first, it.second)) }
+            }
+        }.build()
+    }
+
+    fun selectText(key: Int) {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+            when (key) {
+                OFF -> setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                else -> {
+                    setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+                    textTracks.getOrNull(key)?.let { setOverrideForType(TrackSelectionOverride(it.first, it.second)) }
+                }
+            }
+        }.build()
+    }
+
+    fun selectVideo(key: Int) {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().apply {
+            if (key == AUTO) {
+                clearOverridesOfType(C.TRACK_TYPE_VIDEO)
+            } else {
+                videoTracks.getOrNull(key)?.let { setOverrideForType(TrackSelectionOverride(it.first, it.second)) }
+            }
+        }.build()
+    }
+
+    private fun refreshTracks(current: Tracks) {
+        audioTracks.clear(); textTracks.clear(); videoTracks.clear()
+        val audio = mutableListOf<TrackOption>()
+        val text = mutableListOf<TrackOption>()
+        val video = mutableListOf<TrackOption>()
+        var audioSel = false
+        var textSel = false
+        var videoSel = false
+
+        for (group in current.groups) {
+            for (i in 0 until group.length) {
+                if (!group.isTrackSupported(i)) continue
+                val format = group.getTrackFormat(i)
+                val selected = group.isTrackSelected(i)
+                when (group.type) {
+                    C.TRACK_TYPE_AUDIO -> {
+                        audioTracks.add(group.mediaTrackGroup to i)
+                        if (selected) audioSel = true
+                        audio.add(TrackOption(audioTracks.lastIndex, audioLabel(format, audio.size), selected))
+                    }
+                    C.TRACK_TYPE_TEXT -> {
+                        textTracks.add(group.mediaTrackGroup to i)
+                        if (selected) textSel = true
+                        text.add(TrackOption(textTracks.lastIndex, textLabel(format, text.size), selected))
+                    }
+                    C.TRACK_TYPE_VIDEO -> {
+                        videoTracks.add(group.mediaTrackGroup to i)
+                        if (selected) videoSel = true
+                        video.add(TrackOption(videoTracks.lastIndex, videoLabel(format), selected))
+                    }
+                }
+            }
+        }
+
+        _tracks.value = PlayerTracks(
+            audio = if (audio.isEmpty()) emptyList() else listOf(TrackOption(AUTO, "Automatisch", !audioSel)) + audio,
+            text = listOf(TrackOption(OFF, "Aus", !textSel)) + text,
+            video = if (video.size <= 1) emptyList() else listOf(TrackOption(AUTO, "Auto (beste Qualität)", !videoSel)) + video,
+        )
+    }
+
+    private fun audioLabel(format: Format, index: Int): String {
+        val parts = listOfNotNull(
+            format.label,
+            format.language?.takeIf { it.isNotBlank() && it != "und" }
+                ?.let { runCatching { Locale(it).displayLanguage }.getOrNull()?.ifBlank { it } ?: it },
+            format.channelCount.takeIf { it > 0 }?.let { "${it}ch" },
+            format.codecs?.substringBefore('.')?.uppercase(),
+        ).distinct()
+        return parts.joinToString(" · ").ifBlank { "Tonspur ${index + 1}" }
+    }
+
+    private fun textLabel(format: Format, index: Int): String {
+        val lang = format.language?.takeIf { it.isNotBlank() && it != "und" }
+            ?.let { runCatching { Locale(it).displayLanguage }.getOrNull()?.ifBlank { it } ?: it }
+        return listOfNotNull(format.label, lang).distinct().joinToString(" · ").ifBlank { "Untertitel ${index + 1}" }
+    }
+
+    private fun videoLabel(format: Format): String {
+        val parts = listOfNotNull(
+            format.height.takeIf { it > 0 }?.let { "${it}p" },
+            format.bitrate.takeIf { it > 0 }?.let { "${it / 1000} kbps" },
+        )
+        return parts.joinToString(" · ").ifBlank { "Video" }
     }
 
     fun retry() {
@@ -213,5 +382,10 @@ class PlayerViewModel @Inject constructor(
     override fun onCleared() {
         player.removeListener(playerListener)
         player.release()
+    }
+
+    private companion object {
+        const val AUTO = -1
+        const val OFF = -2
     }
 }

@@ -51,6 +51,13 @@ enum class BufferProfile(
     LARGE("Groß – für instabile Netze", 30_000, 120_000, 3_000, 8_000),
 }
 
+/** Codec/decoder preference for the player. */
+enum class DecoderMode(val label: String) {
+    HARDWARE("Hardware (empfohlen)"),
+    HW_FALLBACK("Hardware + Software-Fallback"),
+    SOFTWARE("Software bevorzugen"),
+}
+
 data class AppSettings(
     /** Custom XMLTV EPG URL; blank means use {base}/xmltv.php. */
     val epgUrl: String = "",
@@ -58,6 +65,7 @@ data class AppSettings(
     val channelSort: ChannelSort = ChannelSort.DEFAULT,
     val aspectMode: AspectMode = AspectMode.FIT,
     val bufferProfile: BufferProfile = BufferProfile.NORMAL,
+    val decoderMode: DecoderMode = DecoderMode.HW_FALLBACK,
 )
 
 private val Context.settingsDataStore by preferencesDataStore(name = "app_settings")
@@ -91,6 +99,7 @@ class SettingsStore @Inject constructor(
     suspend fun setChannelSort(value: ChannelSort) = put(Keys.CHANNEL_SORT, value.name)
     suspend fun setAspectMode(value: AspectMode) = put(Keys.ASPECT_MODE, value.name)
     suspend fun setBufferProfile(value: BufferProfile) = put(Keys.BUFFER_PROFILE, value.name)
+    suspend fun setDecoderMode(value: DecoderMode) = put(Keys.DECODER_MODE, value.name)
 
     private suspend fun put(key: Preferences.Key<String>, value: String) {
         context.settingsDataStore.edit { it[key] = value }
@@ -102,6 +111,7 @@ class SettingsStore @Inject constructor(
         channelSort = enumOrDefault(this[Keys.CHANNEL_SORT], ChannelSort.DEFAULT),
         aspectMode = enumOrDefault(this[Keys.ASPECT_MODE], AspectMode.FIT),
         bufferProfile = enumOrDefault(this[Keys.BUFFER_PROFILE], BufferProfile.NORMAL),
+        decoderMode = enumOrDefault(this[Keys.DECODER_MODE], DecoderMode.HW_FALLBACK),
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(value: String?, default: T): T =
@@ -113,5 +123,6 @@ class SettingsStore @Inject constructor(
         val CHANNEL_SORT = stringPreferencesKey("channel_sort")
         val ASPECT_MODE = stringPreferencesKey("aspect_mode")
         val BUFFER_PROFILE = stringPreferencesKey("buffer_profile")
+        val DECODER_MODE = stringPreferencesKey("decoder_mode")
     }
 }

@@ -41,6 +41,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.tv.foundation.lazy.list.TvLazyColumn
+import androidx.tv.foundation.lazy.list.items
 import androidx.tv.foundation.lazy.list.itemsIndexed
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -56,16 +57,21 @@ fun PlayerScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val channels by viewModel.channels.collectAsStateWithLifecycle()
+    val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val focusRequester = remember { FocusRequester() }
     val interactionSource = remember { MutableInteractionSource() }
 
     BackHandler {
-        if (uiState.showChannelList) viewModel.hideChannelList() else onBack()
+        when {
+            uiState.showOptions -> viewModel.hideOptions()
+            uiState.showChannelList -> viewModel.hideChannelList()
+            else -> onBack()
+        }
     }
 
-    // Keep focus on the surface for D-pad zapping when the overlay is closed.
-    LaunchedEffect(uiState.showChannelList) {
-        if (!uiState.showChannelList) {
+    // Keep focus on the surface for D-pad zapping when no overlay is open.
+    LaunchedEffect(uiState.showChannelList, uiState.showOptions) {
+        if (!uiState.showChannelList && !uiState.showOptions) {
             runCatching { focusRequester.requestFocus() }
         }
     }
@@ -74,22 +80,25 @@ fun PlayerScreen(
         .fillMaxSize()
         .background(Color.Black)
         .focusRequester(focusRequester)
-    // Live: custom surf/zap interaction. VOD/series: rely on the player's own seek controls.
-    val rootModifier = if (uiState.isLive) {
-        baseModifier
-            .onPreviewKeyEvent { event ->
-                if (event.type != KeyEventType.KeyDown || uiState.showChannelList) return@onPreviewKeyEvent false
-                when (event.key) {
-                    Key.DirectionUp, Key.ChannelUp -> { viewModel.channelUp(); true }
-                    Key.DirectionDown, Key.ChannelDown -> { viewModel.channelDown(); true }
-                    else -> false
-                }
+        .onPreviewKeyEvent { event ->
+            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+            if (uiState.showOptions || uiState.showChannelList) return@onPreviewKeyEvent false
+            when (event.key) {
+                Key.Menu -> { viewModel.toggleOptions(); true }
+                Key.DirectionUp, Key.ChannelUp ->
+                    if (uiState.isLive) { viewModel.channelUp(); true } else false
+                Key.DirectionDown, Key.ChannelDown ->
+                    if (uiState.isLive) { viewModel.channelDown(); true } else false
+                else -> false
             }
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = { viewModel.toggleChannelList() },
-            )
+        }
+    // Live: tap toggles the channel list. VOD/series: rely on the player's own seek controls.
+    val rootModifier = if (uiState.isLive) {
+        baseModifier.clickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = { viewModel.toggleChannelList() },
+        )
     } else {
         baseModifier
     }
@@ -148,6 +157,132 @@ fun PlayerScreen(
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
         }
+
+        if (uiState.error == null && !uiState.showChannelList && !uiState.showOptions) {
+            Text(
+                text = "MENU = Optionen",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color(0x99FFFFFF),
+                modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+            )
+        }
+
+        if (uiState.showOptions) {
+            PlayerOptionsOverlay(
+                tracks = tracks,
+                isLive = uiState.isLive,
+                aspectLabel = uiState.aspectMode.label,
+                playbackSpeed = uiState.playbackSpeed,
+                onCycleAspect = viewModel::cycleAspect,
+                onSetSpeed = viewModel::setSpeed,
+                onSelectAudio = viewModel::selectAudio,
+                onSelectText = viewModel::selectText,
+                onSelectVideo = viewModel::selectVideo,
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        }
+    }
+}
+
+private val SPEED_OPTIONS = listOf(0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
+
+@Composable
+private fun PlayerOptionsOverlay(
+    tracks: PlayerTracks,
+    isLive: Boolean,
+    aspectLabel: String,
+    playbackSpeed: Float,
+    onCycleAspect: () -> Unit,
+    onSetSpeed: (Float) -> Unit,
+    onSelectAudio: (Int) -> Unit,
+    onSelectText: (Int) -> Unit,
+    onSelectVideo: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxHeight()
+            .width(420.dp)
+            .background(Color(0xF2111418))
+            .padding(16.dp),
+    ) {
+        TvLazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            item {
+                OptionsHeader("Bild")
+            }
+            item {
+                OptionRow(label = "Seitenverhältnis: $aspectLabel", selected = false, onClick = onCycleAspect)
+            }
+            if (!isLive) {
+                item { OptionsHeader("Geschwindigkeit") }
+                items(SPEED_OPTIONS) { speed ->
+                    OptionRow(
+                        label = if (speed == 1.0f) "Normal (1.0×)" else "${speed}×",
+                        selected = speed == playbackSpeed,
+                        onClick = { onSetSpeed(speed) },
+                    )
+                }
+            }
+            if (tracks.audio.isNotEmpty()) {
+                item { OptionsHeader("Tonspur") }
+                items(tracks.audio) { option ->
+                    OptionRow(option.label, option.selected) { onSelectAudio(option.key) }
+                }
+            }
+            if (tracks.text.isNotEmpty()) {
+                item { OptionsHeader("Untertitel") }
+                items(tracks.text) { option ->
+                    OptionRow(option.label, option.selected) { onSelectText(option.key) }
+                }
+            }
+            if (tracks.video.isNotEmpty()) {
+                item { OptionsHeader("Qualität") }
+                items(tracks.video) { option ->
+                    OptionRow(option.label, option.selected) { onSelectVideo(option.key) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OptionsHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        color = Color(0xFFB8C0CC),
+        modifier = Modifier.padding(top = 12.dp, bottom = 2.dp, start = 4.dp),
+    )
+}
+
+@Composable
+private fun OptionRow(label: String, selected: Boolean, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val bg = if (isFocused) MaterialTheme.colorScheme.primary else Color.Transparent
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(bg, RoundedCornerShape(8.dp))
+            .clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = if (selected) "●" else "○",
+            style = MaterialTheme.typography.labelLarge,
+            color = if (selected) Color(0xFF22C55E) else Color(0x66FFFFFF),
+            modifier = Modifier.width(24.dp),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = Color.White,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

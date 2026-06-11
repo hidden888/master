@@ -7,6 +7,7 @@ import com.iptv.player.core.util.AppSettings
 import com.iptv.player.core.util.AspectMode
 import com.iptv.player.core.util.BufferProfile
 import com.iptv.player.core.util.ChannelSort
+import com.iptv.player.core.util.DecoderMode
 import com.iptv.player.core.util.SessionManager
 import com.iptv.player.core.util.SettingsStore
 import com.iptv.player.core.util.StreamFormat
@@ -79,6 +80,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setBufferProfile(value: BufferProfile) {
         viewModelScope.launch { settingsStore.setBufferProfile(value) }
+    }
+
+    fun setDecoderMode(value: DecoderMode) {
+        viewModelScope.launch { settingsStore.setDecoderMode(value) }
     }
 
     fun setEpgUrl(value: String) {

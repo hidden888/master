@@ -39,6 +39,7 @@ import com.iptv.player.core.ui.components.TvTextField
 import com.iptv.player.core.util.AspectMode
 import com.iptv.player.core.util.BufferProfile
 import com.iptv.player.core.util.ChannelSort
+import com.iptv.player.core.util.DecoderMode
 import com.iptv.player.core.util.StreamFormat
 import com.iptv.player.domain.model.Account
 
@@ -97,8 +98,16 @@ fun SettingsScreen(
             labelOf = { it.label },
             onSelect = viewModel::setBufferProfile,
         )
+        ChoiceRow(
+            label = "Decoder",
+            options = DecoderMode.entries,
+            selected = settings.decoderMode,
+            labelOf = { it.label },
+            onSelect = viewModel::setDecoderMode,
+        )
         Text(
-            text = "Format/Puffer greifen ab der nächsten Wiedergabe.",
+            text = "Format/Puffer/Decoder greifen ab der nächsten Wiedergabe. " +
+                "Im Player öffnet die MENU-Taste Ton-/Untertitel-/Qualitätsauswahl, Seitenverhältnis und Tempo.",
             style = MaterialTheme.typography.labelSmall,
             color = Color(0xFFB8C0CC),
         )
