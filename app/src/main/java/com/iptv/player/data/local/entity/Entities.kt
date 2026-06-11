@@ -104,6 +104,20 @@ data class ProfileEntity(
 )
 
 @Entity(
+    tableName = "playback_positions",
+    primaryKeys = ["accountId", "type", "itemId"],
+)
+data class ResumeEntity(
+    val accountId: Long,
+    val type: StreamType,
+    /** streamId for VOD, episode id for SERIES. */
+    val itemId: Int,
+    val positionMs: Long,
+    val durationMs: Long,
+    val updatedAt: Long = System.currentTimeMillis(),
+)
+
+@Entity(
     tableName = "favorites",
     primaryKeys = ["accountId", "profileId", "type", "itemId"],
     indices = [Index("accountId", "profileId", "type")],

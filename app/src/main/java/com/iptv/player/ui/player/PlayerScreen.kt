@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,12 +84,20 @@ fun PlayerScreen(
         .onPreviewKeyEvent { event ->
             if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
             if (uiState.showOptions || uiState.showChannelList) return@onPreviewKeyEvent false
-            when (event.key) {
-                Key.Menu -> { viewModel.toggleOptions(); true }
-                Key.DirectionUp, Key.ChannelUp ->
-                    if (uiState.isLive) { viewModel.channelUp(); true } else false
-                Key.DirectionDown, Key.ChannelDown ->
-                    if (uiState.isLive) { viewModel.channelDown(); true } else false
+            val digit = keyToDigit(event.key)
+            when {
+                event.key == Key.Menu -> { viewModel.toggleOptions(); true }
+                uiState.isLive && digit != null -> { viewModel.onDigit(digit); true }
+                uiState.isLive && uiState.numberInput.isNotEmpty() &&
+                    (event.key == Key.Enter || event.key == Key.NumPadEnter || event.key == Key.DirectionCenter) -> {
+                    viewModel.commitNumber(); true
+                }
+                uiState.isLive && (event.key == Key.DirectionUp || event.key == Key.ChannelUp) -> {
+                    viewModel.channelUp(); true
+                }
+                uiState.isLive && (event.key == Key.DirectionDown || event.key == Key.ChannelDown) -> {
+                    viewModel.channelDown(); true
+                }
                 else -> false
             }
         }
@@ -142,12 +151,32 @@ fun PlayerScreen(
             )
         }
 
-        if (uiState.error == null && uiState.isLive && !uiState.showChannelList) {
+        if (uiState.error == null && uiState.isLive && !uiState.showChannelList && uiState.numberInput.isEmpty()) {
             NowNextBar(
                 channelNumber = uiState.channelNumber,
                 channelName = uiState.title,
+                nowTitle = uiState.nowTitle,
+                nextTitle = uiState.nextTitle,
+                nowStartUtc = uiState.nowStartUtc,
+                nowEndUtc = uiState.nowEndUtc,
                 modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(),
             )
+        }
+
+        if (uiState.numberInput.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(32.dp)
+                    .background(Color(0xCC000000), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 28.dp, vertical = 16.dp),
+            ) {
+                Text(
+                    text = uiState.numberInput,
+                    style = MaterialTheme.typography.displaySmall,
+                    color = Color.White,
+                )
+            }
         }
 
         if (uiState.showChannelList) {
@@ -358,20 +387,75 @@ private fun ChannelOverlayRow(
 private fun NowNextBar(
     channelNumber: Int,
     channelName: String,
+    nowTitle: String,
+    nextTitle: String,
+    nowStartUtc: Long,
+    nowEndUtc: Long,
     modifier: Modifier = Modifier,
 ) {
-    Row(
+    Column(
         modifier = modifier
             .background(Color(0xCC000000))
             .padding(horizontal = 32.dp, vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column {
+        Text(
+            text = if (channelNumber > 0) "$channelNumber · $channelName" else channelName,
+            style = MaterialTheme.typography.titleLarge,
+            color = Color.White,
+        )
+        if (nowTitle.isNotBlank()) {
             Text(
-                text = if (channelNumber > 0) "$channelNumber · $channelName" else channelName,
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
+                text = "Jetzt: $nowTitle",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color(0xFFD1D5DB),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            if (nowEndUtc > nowStartUtc) {
+                val now = System.currentTimeMillis()
+                val fraction = ((now - nowStartUtc).toFloat() / (nowEndUtc - nowStartUtc)).coerceIn(0f, 1f)
+                Box(
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .fillMaxWidth(0.5f)
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0x33FFFFFF)),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(MaterialTheme.colorScheme.primary),
+                    )
+                }
+            }
+        }
+        if (nextTitle.isNotBlank()) {
+            Text(
+                text = "Danach: $nextTitle",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color(0xFFB8C0CC),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp),
             )
         }
     }
+}
+
+private fun keyToDigit(key: Key): Int? = when (key) {
+    Key.Zero, Key.NumPad0 -> 0
+    Key.One, Key.NumPad1 -> 1
+    Key.Two, Key.NumPad2 -> 2
+    Key.Three, Key.NumPad3 -> 3
+    Key.Four, Key.NumPad4 -> 4
+    Key.Five, Key.NumPad5 -> 5
+    Key.Six, Key.NumPad6 -> 6
+    Key.Seven, Key.NumPad7 -> 7
+    Key.Eight, Key.NumPad8 -> 8
+    Key.Nine, Key.NumPad9 -> 9
+    else -> null
 }

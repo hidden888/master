@@ -9,6 +9,7 @@ import com.iptv.player.data.local.dao.ChannelDao
 import com.iptv.player.data.local.dao.EpgDao
 import com.iptv.player.data.local.dao.FavoriteDao
 import com.iptv.player.data.local.dao.ProfileDao
+import com.iptv.player.data.local.dao.ResumeDao
 import com.iptv.player.data.local.dao.SeriesDao
 import com.iptv.player.data.local.dao.VodDao
 import com.iptv.player.data.local.entity.AccountEntity
@@ -17,6 +18,7 @@ import com.iptv.player.data.local.entity.ChannelEntity
 import com.iptv.player.data.local.entity.EpgProgramEntity
 import com.iptv.player.data.local.entity.FavoriteEntity
 import com.iptv.player.data.local.entity.ProfileEntity
+import com.iptv.player.data.local.entity.ResumeEntity
 import com.iptv.player.data.local.entity.SeriesEntity
 import com.iptv.player.data.local.entity.VodEntity
 
@@ -30,8 +32,9 @@ import com.iptv.player.data.local.entity.VodEntity
         SeriesEntity::class,
         FavoriteEntity::class,
         ProfileEntity::class,
+        ResumeEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)
@@ -44,4 +47,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun seriesDao(): SeriesDao
     abstract fun favoriteDao(): FavoriteDao
     abstract fun profileDao(): ProfileDao
+    abstract fun resumeDao(): ResumeDao
 }

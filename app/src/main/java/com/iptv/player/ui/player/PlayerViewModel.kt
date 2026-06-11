@@ -33,10 +33,13 @@ import com.iptv.player.domain.model.Channel
 import com.iptv.player.domain.repository.AccountRepository
 import com.iptv.player.domain.repository.CATEGORY_ALL
 import com.iptv.player.domain.repository.LiveRepository
+import com.iptv.player.domain.repository.ResumeRepository
 import com.iptv.player.domain.repository.VodRepository
 import com.iptv.player.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -55,6 +58,12 @@ data class PlayerUiState(
     val showOptions: Boolean = false,
     val aspectMode: AspectMode = AspectMode.FIT,
     val playbackSpeed: Float = 1f,
+    val nowTitle: String = "",
+    val nextTitle: String = "",
+    val nowStartUtc: Long = 0,
+    val nowEndUtc: Long = 0,
+    /** Digits being entered for channel-number zapping; blank when idle. */
+    val numberInput: String = "",
 )
 
 /** One selectable entry in the player's track menus. */
@@ -74,6 +83,7 @@ class PlayerViewModel @Inject constructor(
     private val liveRepository: LiveRepository,
     private val vodRepository: VodRepository,
     private val accountRepository: AccountRepository,
+    private val resumeRepository: ResumeRepository,
     private val settingsStore: SettingsStore,
     private val sessionManager: SessionManager,
     savedStateHandle: SavedStateHandle,
@@ -114,6 +124,11 @@ class PlayerViewModel @Inject constructor(
     private var currentBase = ""
     private var currentUser = ""
     private var currentPass = ""
+    private var accountId: Long = 0
+    private var resumePositionMs: Long = 0
+    private var didResumeSeek = false
+    private var numberJob: Job? = null
+    private var nowNextJob: Job? = null
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(state: Int) {
@@ -122,6 +137,13 @@ class PlayerViewModel @Inject constructor(
 
         override fun onTracksChanged(tracks: Tracks) {
             refreshTracks(tracks)
+        }
+
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            // Persist progress whenever playback pauses (covers leaving the screen).
+            if (!isPlaying && type != StreamType.LIVE) {
+                viewModelScope.launch { saveResume() }
+            }
         }
 
         override fun onPlayerError(error: PlaybackException) {
@@ -171,7 +193,7 @@ class PlayerViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val accountId = sessionManager.activeAccountId.filterNotNull().first()
+            accountId = sessionManager.activeAccountId.filterNotNull().first()
             val account = accountRepository.getAccount(accountId)
             if (account == null) {
                 _uiState.value = _uiState.value.copy(error = "Konto nicht gefunden.", isBuffering = false)
@@ -185,11 +207,23 @@ class PlayerViewModel @Inject constructor(
                 _channels.value = liveRepository.observeChannels(accountId, CATEGORY_ALL).first()
                 updateLiveInfo()
                 sessionManager.setLastChannel(currentId.toLong())
-            } else if (type == StreamType.VOD) {
-                val movie = vodRepository.getMovie(accountId, currentId)
-                _uiState.value = _uiState.value.copy(title = movie?.name ?: "")
+            } else {
+                if (type == StreamType.VOD) {
+                    val movie = vodRepository.getMovie(accountId, currentId)
+                    _uiState.value = _uiState.value.copy(title = movie?.name ?: "")
+                }
+                resumePositionMs = resumeRepository.getPosition(accountId, type, currentId)
             }
             play()
+        }
+        // Periodically remember the VOD/series position so playback can resume later.
+        if (type != StreamType.LIVE) {
+            viewModelScope.launch {
+                while (true) {
+                    delay(10_000)
+                    saveResume()
+                }
+            }
         }
     }
 
@@ -199,6 +233,28 @@ class PlayerViewModel @Inject constructor(
             title = channel?.name ?: _uiState.value.title,
             channelNumber = channel?.num ?: _uiState.value.channelNumber,
         )
+        loadNowNext()
+    }
+
+    private fun loadNowNext() {
+        if (type != StreamType.LIVE) return
+        nowNextJob?.cancel()
+        nowNextJob = viewModelScope.launch {
+            val nowNext = runCatching { liveRepository.getNowNext(accountId, currentId) }.getOrNull()
+            _uiState.value = _uiState.value.copy(
+                nowTitle = nowNext?.now?.title ?: "",
+                nextTitle = nowNext?.next?.title ?: "",
+                nowStartUtc = nowNext?.now?.startUtc ?: 0,
+                nowEndUtc = nowNext?.now?.endUtc ?: 0,
+            )
+        }
+    }
+
+    private suspend fun saveResume() {
+        if (type == StreamType.LIVE) return
+        val duration = player.duration.takeIf { it > 0 } ?: 0L
+        val position = player.currentPosition.coerceAtLeast(0L)
+        resumeRepository.save(accountId, type, currentId, position, duration)
     }
 
     private fun play() {
@@ -209,7 +265,32 @@ class PlayerViewModel @Inject constructor(
         }
         player.setMediaItem(MediaItem.fromUri(url))
         player.prepare()
+        if (type != StreamType.LIVE && resumePositionMs > 0 && !didResumeSeek) {
+            player.seekTo(resumePositionMs)
+            didResumeSeek = true
+        }
         player.play()
+    }
+
+    /** Channel-number zapping: digits accumulate, then tune after a short pause. */
+    fun onDigit(digit: Int) {
+        if (type != StreamType.LIVE) return
+        val input = (_uiState.value.numberInput + digit).take(4)
+        _uiState.value = _uiState.value.copy(numberInput = input)
+        numberJob?.cancel()
+        numberJob = viewModelScope.launch {
+            delay(2_000)
+            commitNumber()
+        }
+    }
+
+    fun commitNumber() {
+        val number = _uiState.value.numberInput.toIntOrNull()
+        _uiState.value = _uiState.value.copy(numberInput = "")
+        numberJob?.cancel()
+        if (number != null) {
+            _channels.value.firstOrNull { it.num == number }?.let { tuneTo(it.streamId) }
+        }
     }
 
     fun tuneTo(streamId: Int) {

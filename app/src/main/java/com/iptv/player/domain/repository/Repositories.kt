@@ -104,4 +104,12 @@ interface FavoriteRepository {
     )
 }
 
+interface ResumeRepository {
+    /** Saved playback position in ms, or 0 when there is nothing to resume. */
+    suspend fun getPosition(accountId: Long, type: StreamType, itemId: Int): Long
+
+    /** Persists progress; clears the entry automatically when the item is (almost) finished. */
+    suspend fun save(accountId: Long, type: StreamType, itemId: Int, positionMs: Long, durationMs: Long)
+}
+
 const val CATEGORY_ALL = "__all__"

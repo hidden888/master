@@ -12,6 +12,7 @@ import com.iptv.player.data.local.entity.ChannelEntity
 import com.iptv.player.data.local.entity.EpgProgramEntity
 import com.iptv.player.data.local.entity.FavoriteEntity
 import com.iptv.player.data.local.entity.ProfileEntity
+import com.iptv.player.data.local.entity.ResumeEntity
 import com.iptv.player.data.local.entity.SeriesEntity
 import com.iptv.player.data.local.entity.VodEntity
 import kotlinx.coroutines.flow.Flow
@@ -140,6 +141,18 @@ interface EpgDao {
             "AND endUtc > :start AND startUtc < :end ORDER BY epgChannelId, startUtc",
     )
     suspend fun getProgramsInWindow(accountId: Long, start: Long, end: Long): List<EpgProgramEntity>
+}
+
+@Dao
+interface ResumeDao {
+    @Upsert
+    suspend fun upsert(entry: ResumeEntity)
+
+    @Query("SELECT * FROM playback_positions WHERE accountId = :accountId AND type = :type AND itemId = :itemId")
+    suspend fun get(accountId: Long, type: StreamType, itemId: Int): ResumeEntity?
+
+    @Query("DELETE FROM playback_positions WHERE accountId = :accountId AND type = :type AND itemId = :itemId")
+    suspend fun delete(accountId: Long, type: StreamType, itemId: Int)
 }
 
 @Dao
