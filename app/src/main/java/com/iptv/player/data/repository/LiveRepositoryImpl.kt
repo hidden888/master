@@ -2,6 +2,7 @@ package com.iptv.player.data.repository
 
 import com.iptv.player.core.network.NetworkResult
 import com.iptv.player.core.util.CredentialCrypto
+import com.iptv.player.core.util.SettingsStore
 import com.iptv.player.core.util.StreamType
 import com.iptv.player.core.util.UrlBuilder
 import com.iptv.player.data.local.dao.AccountDao
@@ -16,6 +17,7 @@ import com.iptv.player.domain.model.NowNext
 import com.iptv.player.domain.repository.CATEGORY_ALL
 import com.iptv.player.domain.repository.LiveRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -25,6 +27,7 @@ class LiveRepositoryImpl @Inject constructor(
     private val categoryDao: CategoryDao,
     private val channelDao: ChannelDao,
     private val crypto: CredentialCrypto,
+    private val settingsStore: SettingsStore,
 ) : LiveRepository {
 
     override fun observeCategories(accountId: Long): Flow<List<Category>> =
@@ -78,8 +81,10 @@ class LiveRepositoryImpl @Inject constructor(
         val url = UrlBuilder.playerApi(account.baseUrl)
         return try {
             val response = api.getShortEpg(url, account.username, pass, streamId, limit = 2)
+            val offset = settingsStore.settings.first().epgOffsetHours * 3_600_000L
             val now = System.currentTimeMillis()
             val programs = response.body()?.listings?.map { it.toDomain() }.orEmpty()
+                .map { if (offset == 0L) it else it.copy(startUtc = it.startUtc + offset, endUtc = it.endUtc + offset) }
                 .sortedBy { it.startUtc }
             val current = programs.firstOrNull { now in it.startUtc until it.endUtc }
                 ?: programs.firstOrNull()

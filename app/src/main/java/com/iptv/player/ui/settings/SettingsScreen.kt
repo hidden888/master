@@ -159,6 +159,21 @@ fun SettingsScreen(
         status?.let {
             Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.secondary)
         }
+        Text("EPG-Zeitversatz", style = MaterialTheme.typography.titleMedium, color = Color.White)
+        Text(
+            text = "Verschiebt die Programmzeiten, falls dein EPG zeitlich daneben liegt.",
+            style = MaterialTheme.typography.labelSmall,
+            color = Color(0xFFB8C0CC),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PrimaryButton(text = "−1 h", onClick = { viewModel.setEpgOffsetHours(settings.epgOffsetHours - 1) })
+            Text(
+                text = "${if (settings.epgOffsetHours >= 0) "+" else ""}${settings.epgOffsetHours} h",
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+            )
+            PrimaryButton(text = "+1 h", onClick = { viewModel.setEpgOffsetHours(settings.epgOffsetHours + 1) })
+        }
 
         // ---- Konten ----
         SectionTitle("Konten")

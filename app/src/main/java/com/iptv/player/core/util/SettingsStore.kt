@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -72,6 +73,8 @@ data class AppSettings(
     val showChannelNumbers: Boolean = true,
     /** When on, hidden channels stay visible (so they can be un-hidden). */
     val showHiddenChannels: Boolean = false,
+    /** EPG time shift in hours (-12..12) applied when reading the guide. */
+    val epgOffsetHours: Int = 0,
 )
 
 private val Context.settingsDataStore by preferencesDataStore(name = "app_settings")
@@ -111,6 +114,10 @@ class SettingsStore @Inject constructor(
     suspend fun setShowChannelNumbers(value: Boolean) = putBool(Keys.SHOW_NUMBERS, value)
     suspend fun setShowHiddenChannels(value: Boolean) = putBool(Keys.SHOW_HIDDEN, value)
 
+    suspend fun setEpgOffsetHours(value: Int) {
+        context.settingsDataStore.edit { it[Keys.EPG_OFFSET] = value.coerceIn(-12, 12) }
+    }
+
     /** Hidden channel stream ids for a given account. */
     fun hiddenChannels(accountId: Long): Flow<Set<Int>> = context.settingsDataStore.data.map { prefs ->
         prefs[hiddenKey(accountId)]?.mapNotNull { it.toIntOrNull() }?.toSet() ?: emptySet()
@@ -145,6 +152,7 @@ class SettingsStore @Inject constructor(
         showChannelLogos = this[Keys.SHOW_LOGOS] ?: true,
         showChannelNumbers = this[Keys.SHOW_NUMBERS] ?: true,
         showHiddenChannels = this[Keys.SHOW_HIDDEN] ?: false,
+        epgOffsetHours = this[Keys.EPG_OFFSET] ?: 0,
     )
 
     private inline fun <reified T : Enum<T>> enumOrDefault(value: String?, default: T): T =
@@ -160,5 +168,6 @@ class SettingsStore @Inject constructor(
         val SHOW_LOGOS = booleanPreferencesKey("show_logos")
         val SHOW_NUMBERS = booleanPreferencesKey("show_numbers")
         val SHOW_HIDDEN = booleanPreferencesKey("show_hidden")
+        val EPG_OFFSET = intPreferencesKey("epg_offset_hours")
     }
 }

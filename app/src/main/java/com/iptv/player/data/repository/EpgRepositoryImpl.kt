@@ -19,6 +19,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flatMapLatest
@@ -39,11 +40,15 @@ class EpgRepositoryImpl @Inject constructor(
 
     override fun observeCurrentByChannel(accountId: Long): Flow<Map<String, EpgProgram>> =
         // Re-evaluate "now" every minute so the current program advances even without DB changes.
-        ticker(60_000)
-            .flatMapLatest { now -> epgDao.observeCurrent(accountId, now) }
-            .map { programs ->
-                programs.associate { it.epgChannelId to it.toDomain() }
+        combine(ticker(60_000), settingsStore.settings) { now, s -> now to s.epgOffsetHours * 3_600_000L }
+            .flatMapLatest { (now, offset) ->
+                epgDao.observeCurrent(accountId, now - offset).map { programs ->
+                    programs.associate { it.epgChannelId to it.toDomain().shift(offset) }
+                }
             }
+
+    private fun EpgProgram.shift(offsetMs: Long): EpgProgram =
+        if (offsetMs == 0L) this else copy(startUtc = startUtc + offsetMs, endUtc = endUtc + offsetMs)
 
     override suspend fun hasEpg(accountId: Long): Boolean = epgDao.count(accountId) > 0
 
@@ -153,9 +158,11 @@ class EpgRepositoryImpl @Inject constructor(
         accountId: Long,
         start: Long,
         end: Long,
-    ): Map<String, List<EpgProgram>> =
-        epgDao.getProgramsInWindow(accountId, start, end)
-            .groupBy({ it.epgChannelId }, { it.toDomain() })
+    ): Map<String, List<EpgProgram>> {
+        val offset = settingsStore.settings.first().epgOffsetHours * 3_600_000L
+        return epgDao.getProgramsInWindow(accountId, start - offset, end - offset)
+            .groupBy({ it.epgChannelId }, { it.toDomain().shift(offset) })
+    }
 
     private fun ticker(periodMs: Long): Flow<Long> = flow {
         while (true) {

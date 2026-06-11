@@ -98,6 +98,13 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsStore.setShowHiddenChannels(value) }
     }
 
+    fun setEpgOffsetHours(value: Int) {
+        viewModelScope.launch {
+            settingsStore.setEpgOffsetHours(value)
+            refreshEpg()
+        }
+    }
+
     fun setEpgUrl(value: String) {
         viewModelScope.launch {
             settingsStore.setEpgUrl(value)
