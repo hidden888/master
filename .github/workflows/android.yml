@@ -10,6 +10,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,10 +31,26 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Upload debug APK
+      - name: Rename APK
+        if: success()
+        run: cp app/build/outputs/apk/debug/*.apk streamdeck-tv-debug.apk
+
+      - name: Upload debug APK (artifact)
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: streamdeck-tv-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: streamdeck-tv-debug.apk
           if-no-files-found: error
+
+      - name: Publish APK to rolling release (public download)
+        if: success() && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: dev-latest
+          name: StreamDeck TV – aktueller Test-Build
+          body: |
+            Automatisch aus dem neuesten Build erstellt.
+            Commit: ${{ github.sha }}
+          prerelease: true
+          files: streamdeck-tv-debug.apk
