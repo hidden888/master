@@ -46,6 +46,7 @@ import com.iptv.player.core.util.BufferProfile
 import com.iptv.player.core.util.ChannelSort
 import com.iptv.player.core.util.DecoderMode
 import com.iptv.player.core.util.StreamFormat
+import com.iptv.player.core.util.VodSort
 import com.iptv.player.domain.model.Account
 
 @Composable
@@ -141,6 +142,13 @@ fun SettingsScreen(
         ToggleRow("Sendernummern anzeigen", settings.showChannelNumbers, viewModel::setShowChannelNumbers)
         ToggleRow("Senderlogos anzeigen", settings.showChannelLogos, viewModel::setShowChannelLogos)
         ToggleRow("Ausgeblendete Sender anzeigen", settings.showHiddenChannels, viewModel::setShowHiddenChannels)
+        ChoiceRow(
+            label = "Filme-Sortierung",
+            options = VodSort.entries,
+            selected = settings.vodSort,
+            labelOf = { it.label },
+            onSelect = viewModel::setVodSort,
+        )
         Text(
             text = "Sender ausblenden/einblenden: im Live-Tab lange auf einen Sender drücken (Kontextmenü).",
             style = MaterialTheme.typography.labelSmall,

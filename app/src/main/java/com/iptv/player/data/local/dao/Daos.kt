@@ -73,6 +73,9 @@ interface VodDao {
     @Query("SELECT * FROM vod WHERE accountId = :accountId ORDER BY name")
     fun observeAll(accountId: Long): Flow<List<VodEntity>>
 
+    @Query("SELECT * FROM vod WHERE accountId = :accountId ORDER BY added DESC LIMIT :limit")
+    fun observeRecent(accountId: Long, limit: Int): Flow<List<VodEntity>>
+
     @Query("SELECT * FROM vod WHERE accountId = :accountId AND categoryId = :categoryId ORDER BY name")
     fun observeByCategory(accountId: Long, categoryId: String): Flow<List<VodEntity>>
 

@@ -62,6 +62,8 @@ data class PlayerUiState(
     val nextTitle: String = "",
     val nowStartUtc: Long = 0,
     val nowEndUtc: Long = 0,
+    /** Whether the channel info bar (OSD) is currently shown. */
+    val infoVisible: Boolean = true,
     /** Digits being entered for channel-number zapping; blank when idle. */
     val numberInput: String = "",
 )
@@ -129,6 +131,7 @@ class PlayerViewModel @Inject constructor(
     private var didResumeSeek = false
     private var numberJob: Job? = null
     private var nowNextJob: Job? = null
+    private var infoJob: Job? = null
 
     private val playerListener = object : Player.Listener {
         override fun onPlaybackStateChanged(state: Int) {
@@ -234,6 +237,32 @@ class PlayerViewModel @Inject constructor(
             channelNumber = channel?.num ?: _uiState.value.channelNumber,
         )
         loadNowNext()
+        showInfo()
+    }
+
+    /** Show the OSD info bar and auto-hide it after a few seconds. */
+    fun showInfo() {
+        if (type != StreamType.LIVE) return
+        _uiState.value = _uiState.value.copy(infoVisible = true)
+        infoJob?.cancel()
+        infoJob = viewModelScope.launch {
+            delay(5_000)
+            _uiState.value = _uiState.value.copy(infoVisible = false)
+        }
+    }
+
+    /** Center/OK handling for live: commit a typed number, show info, or open the channel list. */
+    fun onCenter() {
+        if (type != StreamType.LIVE) return
+        if (_uiState.value.numberInput.isNotEmpty()) {
+            commitNumber()
+            return
+        }
+        when {
+            _uiState.value.showChannelList -> hideChannelList()
+            _uiState.value.infoVisible -> toggleChannelList()
+            else -> showInfo()
+        }
     }
 
     private fun loadNowNext() {

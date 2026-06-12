@@ -65,6 +65,7 @@ data class VodEntity(
     val rating: String? = null,
     val containerExtension: String? = null,
     val categoryId: String? = null,
+    val added: Long = 0,
 )
 
 @Entity(

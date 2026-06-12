@@ -41,6 +41,7 @@ import com.iptv.player.core.ui.components.LoadingIndicator
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Movie
 import com.iptv.player.domain.repository.CATEGORY_ALL
+import com.iptv.player.domain.repository.CATEGORY_RECENT
 import com.iptv.player.ui.live.SyncState
 
 @Composable
@@ -81,6 +82,9 @@ private fun CategoryRail(
     modifier: Modifier = Modifier,
 ) {
     TvLazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        item {
+            CategoryRow("✨  Neu hinzugefügt", selectedCategoryId == CATEGORY_RECENT) { onSelect(CATEGORY_RECENT) }
+        }
         item {
             CategoryRow("Alle Filme", selectedCategoryId == CATEGORY_ALL) { onSelect(CATEGORY_ALL) }
         }

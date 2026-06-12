@@ -34,7 +34,7 @@ import com.iptv.player.data.local.entity.VodEntity
         ProfileEntity::class,
         ResumeEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 @TypeConverters(Converters::class)

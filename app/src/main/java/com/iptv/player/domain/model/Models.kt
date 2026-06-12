@@ -58,6 +58,7 @@ data class Movie(
     val rating: String?,
     val containerExtension: String?,
     val categoryId: String?,
+    val added: Long = 0,
 )
 
 data class MovieDetail(

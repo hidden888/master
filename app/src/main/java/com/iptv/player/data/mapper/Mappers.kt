@@ -85,6 +85,7 @@ fun VodStreamDto.toEntity(accountId: Long) = VodEntity(
     rating = rating,
     containerExtension = containerExtension,
     categoryId = categoryId,
+    added = added,
 )
 
 fun VodEntity.toDomain() = Movie(
@@ -94,6 +95,7 @@ fun VodEntity.toDomain() = Movie(
     rating = rating,
     containerExtension = containerExtension,
     categoryId = categoryId,
+    added = added,
 )
 
 fun VodInfoResponseDto.toDomain(fallbackExtension: String?) = MovieDetail(

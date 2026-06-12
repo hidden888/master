@@ -39,6 +39,9 @@ class VodRepositoryImpl @Inject constructor(
         return source.map { list -> list.map { it.toDomain() } }
     }
 
+    override fun observeRecentMovies(accountId: Long, limit: Int): Flow<List<Movie>> =
+        vodDao.observeRecent(accountId, limit).map { list -> list.map { it.toDomain() } }
+
     override suspend fun getMovie(accountId: Long, streamId: Int): Movie? =
         vodDao.getById(accountId, streamId)?.toDomain()
 

@@ -88,9 +88,9 @@ fun PlayerScreen(
             when {
                 event.key == Key.Menu -> { viewModel.toggleOptions(); true }
                 uiState.isLive && digit != null -> { viewModel.onDigit(digit); true }
-                uiState.isLive && uiState.numberInput.isNotEmpty() &&
+                uiState.isLive &&
                     (event.key == Key.Enter || event.key == Key.NumPadEnter || event.key == Key.DirectionCenter) -> {
-                    viewModel.commitNumber(); true
+                    viewModel.onCenter(); true
                 }
                 uiState.isLive && (event.key == Key.DirectionUp || event.key == Key.ChannelUp) -> {
                     viewModel.channelUp(); true
@@ -106,7 +106,7 @@ fun PlayerScreen(
         baseModifier.clickable(
             interactionSource = interactionSource,
             indication = null,
-            onClick = { viewModel.toggleChannelList() },
+            onClick = { viewModel.onCenter() },
         )
     } else {
         baseModifier
@@ -151,7 +151,9 @@ fun PlayerScreen(
             )
         }
 
-        if (uiState.error == null && uiState.isLive && !uiState.showChannelList && uiState.numberInput.isEmpty()) {
+        if (uiState.error == null && uiState.isLive && uiState.infoVisible &&
+            !uiState.showChannelList && uiState.numberInput.isEmpty()
+        ) {
             NowNextBar(
                 channelNumber = uiState.channelNumber,
                 channelName = uiState.title,

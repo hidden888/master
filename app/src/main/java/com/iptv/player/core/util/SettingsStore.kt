@@ -34,6 +34,13 @@ enum class ChannelSort(val label: String) {
     NAME("Alphabetisch (A–Z)"),
 }
 
+/** How VOD/series grids are ordered. */
+enum class VodSort(val label: String) {
+    DEFAULT("Standard (A–Z)"),
+    NEWEST("Neueste zuerst"),
+    NAME("Alphabetisch (A–Z)"),
+}
+
 /** Video scaling inside the player surface. */
 enum class AspectMode(val label: String) {
     FIT("Anpassen (Original-Seitenverhältnis)"),
@@ -76,6 +83,7 @@ data class AppSettings(
     val epgUrl: String = "",
     val streamFormat: StreamFormat = StreamFormat.AUTO,
     val channelSort: ChannelSort = ChannelSort.DEFAULT,
+    val vodSort: VodSort = VodSort.DEFAULT,
     val aspectMode: AspectMode = AspectMode.FIT,
     val bufferProfile: BufferProfile = BufferProfile.NORMAL,
     val decoderMode: DecoderMode = DecoderMode.HW_FALLBACK,
@@ -120,6 +128,7 @@ class SettingsStore @Inject constructor(
     suspend fun setEpgUrl(value: String) = put(Keys.EPG_URL, value.trim())
     suspend fun setStreamFormat(value: StreamFormat) = put(Keys.STREAM_FORMAT, value.name)
     suspend fun setChannelSort(value: ChannelSort) = put(Keys.CHANNEL_SORT, value.name)
+    suspend fun setVodSort(value: VodSort) = put(Keys.VOD_SORT, value.name)
     suspend fun setAspectMode(value: AspectMode) = put(Keys.ASPECT_MODE, value.name)
     suspend fun setBufferProfile(value: BufferProfile) = put(Keys.BUFFER_PROFILE, value.name)
     suspend fun setDecoderMode(value: DecoderMode) = put(Keys.DECODER_MODE, value.name)
@@ -164,6 +173,7 @@ class SettingsStore @Inject constructor(
         epgUrl = this[Keys.EPG_URL] ?: "",
         streamFormat = enumOrDefault(this[Keys.STREAM_FORMAT], StreamFormat.AUTO),
         channelSort = enumOrDefault(this[Keys.CHANNEL_SORT], ChannelSort.DEFAULT),
+        vodSort = enumOrDefault(this[Keys.VOD_SORT], VodSort.DEFAULT),
         aspectMode = enumOrDefault(this[Keys.ASPECT_MODE], AspectMode.FIT),
         bufferProfile = enumOrDefault(this[Keys.BUFFER_PROFILE], BufferProfile.NORMAL),
         decoderMode = enumOrDefault(this[Keys.DECODER_MODE], DecoderMode.HW_FALLBACK),
@@ -183,6 +193,7 @@ class SettingsStore @Inject constructor(
         val EPG_URL = stringPreferencesKey("epg_url")
         val STREAM_FORMAT = stringPreferencesKey("stream_format")
         val CHANNEL_SORT = stringPreferencesKey("channel_sort")
+        val VOD_SORT = stringPreferencesKey("vod_sort")
         val ASPECT_MODE = stringPreferencesKey("aspect_mode")
         val BUFFER_PROFILE = stringPreferencesKey("buffer_profile")
         val DECODER_MODE = stringPreferencesKey("decoder_mode")

@@ -4,9 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.iptv.player.core.network.NetworkResult
 import com.iptv.player.core.util.SessionManager
+import com.iptv.player.core.util.SettingsStore
+import com.iptv.player.core.util.VodSort
 import com.iptv.player.domain.model.Category
 import com.iptv.player.domain.model.Movie
 import com.iptv.player.domain.repository.CATEGORY_ALL
+import com.iptv.player.domain.repository.CATEGORY_RECENT
 import com.iptv.player.domain.repository.VodRepository
 import com.iptv.player.ui.live.SyncState
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,6 +30,7 @@ import javax.inject.Inject
 @HiltViewModel
 class VodViewModel @Inject constructor(
     private val vodRepository: VodRepository,
+    private val settingsStore: SettingsStore,
     private val sessionManager: SessionManager,
 ) : ViewModel() {
 
@@ -42,9 +46,24 @@ class VodViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val movies: StateFlow<List<Movie>> =
-        combine(accountId.filterNotNull(), _selectedCategoryId) { id, cat -> id to cat }
-            .flatMapLatest { (id, cat) -> vodRepository.observeMovies(id, cat) }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        combine(
+            combine(accountId.filterNotNull(), _selectedCategoryId) { id, cat -> id to cat }
+                .flatMapLatest { (id, cat) ->
+                    if (cat == CATEGORY_RECENT) vodRepository.observeRecentMovies(id, RECENT_LIMIT)
+                    else vodRepository.observeMovies(id, cat)
+                },
+            settingsStore.settings,
+            _selectedCategoryId,
+        ) { list, settings, category ->
+            // The "recently added" rubric already comes newest-first; leave it untouched.
+            if (category == CATEGORY_RECENT) list else list.sortedForVod(settings.vodSort)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    private fun List<Movie>.sortedForVod(sort: VodSort): List<Movie> = when (sort) {
+        VodSort.NEWEST -> sortedByDescending { it.added }
+        VodSort.NAME -> sortedBy { it.name.lowercase() }
+        VodSort.DEFAULT -> this
+    }
 
     init {
         viewModelScope.launch {
@@ -71,5 +90,9 @@ class VodViewModel @Inject constructor(
                     SyncState.Error(result.throwable.message ?: "Filme konnten nicht geladen werden.")
             }
         }
+    }
+
+    private companion object {
+        const val RECENT_LIMIT = 80
     }
 }

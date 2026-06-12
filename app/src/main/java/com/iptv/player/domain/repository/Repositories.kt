@@ -49,6 +49,7 @@ interface LiveRepository {
 interface VodRepository {
     fun observeCategories(accountId: Long): Flow<List<Category>>
     fun observeMovies(accountId: Long, categoryId: String?): Flow<List<Movie>>
+    fun observeRecentMovies(accountId: Long, limit: Int): Flow<List<Movie>>
     suspend fun getMovie(accountId: Long, streamId: Int): Movie?
     suspend fun syncVod(accountId: Long): NetworkResult<Unit>
     suspend fun getMovieDetail(accountId: Long, streamId: Int): NetworkResult<MovieDetail>
@@ -120,3 +121,4 @@ interface ResumeRepository {
 }
 
 const val CATEGORY_ALL = "__all__"
+const val CATEGORY_RECENT = "__recent__"

@@ -30,6 +30,7 @@ data class VodStreamDto(
     @SerialName("rating") val rating: String? = null,
     @SerialName("container_extension") val containerExtension: String? = null,
     @SerialName("category_id") val categoryId: String? = null,
+    @SerialName("added") @Serializable(StringAsLongSerializer::class) val added: Long = 0,
 )
 
 @Serializable

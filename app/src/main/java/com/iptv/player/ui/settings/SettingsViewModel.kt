@@ -12,6 +12,7 @@ import com.iptv.player.core.util.DecoderMode
 import com.iptv.player.core.util.SessionManager
 import com.iptv.player.core.util.SettingsStore
 import com.iptv.player.core.util.StreamFormat
+import com.iptv.player.core.util.VodSort
 import com.iptv.player.domain.model.Account
 import com.iptv.player.domain.repository.AccountRepository
 import com.iptv.player.domain.repository.EpgRepository
@@ -73,6 +74,10 @@ class SettingsViewModel @Inject constructor(
 
     fun setChannelSort(value: ChannelSort) {
         viewModelScope.launch { settingsStore.setChannelSort(value) }
+    }
+
+    fun setVodSort(value: VodSort) {
+        viewModelScope.launch { settingsStore.setVodSort(value) }
     }
 
     fun setAspectMode(value: AspectMode) {

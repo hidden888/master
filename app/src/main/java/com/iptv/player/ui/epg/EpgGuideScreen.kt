@@ -11,23 +11,31 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.foundation.lazy.list.TvLazyColumn
@@ -56,6 +64,15 @@ fun EpgGuideScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scroll = rememberScrollState()
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val density = LocalDensity.current
+
+    var now by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = System.currentTimeMillis()
+            delay(30_000)
+        }
+    }
 
     when {
         state is EpgState.Loading && programs.isEmpty() ->
@@ -77,23 +94,42 @@ fun EpgGuideScreen(
         channels.isEmpty() ->
             CenteredMessage("Keine Sender vorhanden.")
 
-        else -> Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-            TimelineHeader(
-                windowStart = viewModel.windowStart,
-                windowEnd = viewModel.windowEnd,
-                scroll = scroll,
-                timeFormat = timeFormat,
-            )
-            TvLazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
-                items(channels, key = { it.streamId }) { channel ->
-                    ChannelRow(
-                        channel = channel,
-                        programs = channel.epgChannelId?.let { programs[it] }.orEmpty(),
-                        windowStart = viewModel.windowStart,
-                        windowEnd = viewModel.windowEnd,
-                        scroll = scroll,
-                        timeFormat = timeFormat,
-                        onPlay = { onPlayChannel(channel.streamId) },
+        else -> Box(modifier = Modifier.fillMaxSize().clipToBounds()) {
+            Column(modifier = Modifier.fillMaxSize().padding(12.dp)) {
+                TimelineHeader(
+                    windowStart = viewModel.windowStart,
+                    windowEnd = viewModel.windowEnd,
+                    nowLabel = "Jetzt ${timeFormat.format(Date(now))}",
+                    scroll = scroll,
+                    timeFormat = timeFormat,
+                )
+                TvLazyColumn(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    items(channels, key = { it.streamId }) { channel ->
+                        ChannelRow(
+                            channel = channel,
+                            programs = channel.epgChannelId?.let { programs[it] }.orEmpty(),
+                            windowStart = viewModel.windowStart,
+                            windowEnd = viewModel.windowEnd,
+                            scroll = scroll,
+                            timeFormat = timeFormat,
+                            onPlay = { onPlayChannel(channel.streamId) },
+                        )
+                    }
+                }
+            }
+
+            // Vertical "now" line, moving with the horizontal scroll.
+            if (now in viewModel.windowStart..viewModel.windowEnd) {
+                val scrollDp = with(density) { scroll.value.toDp() }
+                val nowX = 12.dp + CHANNEL_COL_WIDTH +
+                    MINUTE_WIDTH * ((now - viewModel.windowStart) / 60_000f) - scrollDp
+                if (nowX >= 12.dp + CHANNEL_COL_WIDTH) {
+                    Box(
+                        modifier = Modifier
+                            .offset(x = nowX)
+                            .width(2.dp)
+                            .fillMaxHeight()
+                            .background(Color(0xFFEF4444)),
                     )
                 }
             }
@@ -118,12 +154,20 @@ private fun CenteredMessage(message: String, onRetry: (() -> Unit)? = null) {
 private fun TimelineHeader(
     windowStart: Long,
     windowEnd: Long,
+    nowLabel: String,
     scroll: ScrollState,
     timeFormat: SimpleDateFormat,
 ) {
     val slots = ((windowEnd - windowStart) / (SLOT_MINUTES * 60_000L)).toInt()
-    Row(modifier = Modifier.height(28.dp)) {
-        Spacer(Modifier.width(CHANNEL_COL_WIDTH))
+    Row(modifier = Modifier.height(28.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.width(CHANNEL_COL_WIDTH), contentAlignment = Alignment.CenterStart) {
+            Text(
+                text = nowLabel,
+                style = MaterialTheme.typography.labelLarge,
+                color = Color(0xFFEF4444),
+                modifier = Modifier.padding(start = 4.dp),
+            )
+        }
         Row(modifier = Modifier.horizontalScroll(scroll)) {
             for (i in 0 until slots) {
                 val slotStart = windowStart + i * SLOT_MINUTES * 60_000L

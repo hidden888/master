@@ -1,5 +1,6 @@
 package com.iptv.player.ui.main
 
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -90,22 +92,27 @@ fun MainScreen(
         }
     }
 
+    var menuExpanded by remember { mutableStateOf(true) }
+    val sidebarWidth by animateDpAsState(if (menuExpanded) 240.dp else 84.dp, label = "sidebar")
+
     Row(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
-                .width(240.dp)
+                .width(sidebarWidth)
                 .fillMaxHeight()
                 .background(MaterialTheme.colorScheme.surface)
+                .onFocusChanged { menuExpanded = it.hasFocus }
                 .padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = "StreamDeck TV",
+                text = if (menuExpanded) "StreamDeck TV" else "▶",
                 style = MaterialTheme.typography.titleLarge,
                 color = MaterialTheme.colorScheme.primary,
+                maxLines = 1,
                 modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp),
             )
-            if (settings.showClock) {
+            if (settings.showClock && menuExpanded) {
                 val timeText = remember(clockTick) {
                     SimpleDateFormat("EEE  HH:mm", Locale.getDefault()).format(Date(clockTick))
                 }
@@ -123,6 +130,7 @@ fun MainScreen(
                     label = tab.label,
                     icon = tab.icon,
                     selected = selectedTab == tab,
+                    expanded = menuExpanded,
                     onClick = { selectedTab = tab },
                 )
             }
@@ -154,6 +162,7 @@ private fun SidebarItem(
     label: String,
     icon: ImageVector,
     selected: Boolean,
+    expanded: Boolean,
     onClick: () -> Unit,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
@@ -191,12 +200,15 @@ private fun SidebarItem(
             tint = contentColor,
             modifier = Modifier.size(24.dp),
         )
-        Spacer(Modifier.width(14.dp))
-        Text(
-            text = label,
-            style = MaterialTheme.typography.titleMedium,
-            color = contentColor,
-        )
+        if (expanded) {
+            Spacer(Modifier.width(14.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.titleMedium,
+                color = contentColor,
+                maxLines = 1,
+            )
+        }
     }
 }
 
