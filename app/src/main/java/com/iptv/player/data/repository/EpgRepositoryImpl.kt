@@ -104,7 +104,7 @@ class EpgRepositoryImpl @Inject constructor(
         }
         val body = response.body() ?: return emptyList()
         if (!response.isSuccessful) return emptyList()
-        val parsed = body.byteStream().use { xmltvParser.parse(it) }
+        val parsed = maybeGunzip(body.byteStream()).use { xmltvParser.parse(it) }
         return parsed.map {
             EpgProgramEntity(
                 accountId = accountId,
@@ -115,6 +115,17 @@ class EpgRepositoryImpl @Inject constructor(
                 endUtc = it.endUtc,
             )
         }
+    }
+
+    /** Transparently decompresses payload-level gzip (e.g. xmltv.php that returns a .gz body). */
+    private fun maybeGunzip(input: java.io.InputStream): java.io.InputStream {
+        val buffered = java.io.BufferedInputStream(input)
+        buffered.mark(2)
+        val b1 = buffered.read()
+        val b2 = buffered.read()
+        buffered.reset()
+        val isGzip = b1 == 0x1f && b2 == 0x8b
+        return if (isGzip) java.util.zip.GZIPInputStream(buffered) else buffered
     }
 
     private suspend fun downloadShortEpg(
