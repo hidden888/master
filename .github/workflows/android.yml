@@ -45,12 +45,13 @@ jobs:
 
       - name: Publish APK to rolling release (public download)
         if: success() && github.event_name == 'push'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: dev-latest
-          name: StreamDeck TV – aktueller Test-Build
-          body: |
-            Automatisch aus dem neuesten Build erstellt.
-            Commit: ${{ github.sha }}
-          prerelease: true
-          files: streamdeck-tv-debug.apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view dev-latest >/dev/null 2>&1 || \
+            gh release create dev-latest \
+              --prerelease \
+              --title "StreamDeck TV – aktueller Test-Build" \
+              --notes "Automatisch aus dem neuesten Build."
+          gh release upload dev-latest streamdeck-tv-debug.apk --clobber
+          gh release edit dev-latest --notes "Automatischer Build · Commit ${{ github.sha }} · $(date -u '+%Y-%m-%d %H:%M UTC')"
